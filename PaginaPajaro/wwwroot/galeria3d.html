@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Galería 3D — Pájaro</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #F7F1E3; font-family: Inter, system-ui, sans-serif; color: #1D2A25; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #nombres { position: fixed; inset: 0; pointer-events: none; }
+    #nombres div { position: absolute; transform: translate(-50%, 0); font-weight: 700; font-size: 14px; text-align: center; white-space: nowrap; }
+    #nombres em { display: block; font-weight: 400; font-size: 11px; color: #5B6B63; }
+    a { position: fixed; left: 16px; top: 12px; color: #2F6B4F; font-weight: 700; }
+  </style>
+  <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+</head>
+<body>
+  <a href="./">← Volver</a>
+  <div id="nombres"></div>
+  <script src="js/especies-ra.js"></script>
+  <script type="module">
+    import * as THREE from "three";
+    import { crearAve, animarAve, cantar } from "./js/ra/aves3d.js";
+    const E = window.ESPECIES_RA;
+    const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    r.setPixelRatio(Math.min(devicePixelRatio, 2));
+    document.body.appendChild(r.domElement);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color("#F7F1E3");
+    const cam = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+    scene.add(new THREE.HemisphereLight("#fff6e6", "#8a8f74", 1.5));
+    const sol = new THREE.DirectionalLight("#fff1d6", 1.8); sol.position.set(3, 6, 5); scene.add(sol);
+    const cols = 4, aves = [];
+    E.forEach((e, i) => {
+      const a = crearAve(e);
+      a.scale.setScalar(e.escala * 1.0);
+      a.position.set((i % cols - (cols - 1) / 2) * 2.2, -Math.floor(i / cols) * 2.1 + 1.6, 0);
+      a.rotation.y = 0.9;
+      scene.add(a); aves.push(a);
+    });
+    const etiquetas = document.getElementById("nombres");
+    etiquetas.innerHTML = E.map(e => `<div>${e.nombre}<em>${e.cientifico}</em></div>`).join("");
+    function tam() {
+      r.setSize(innerWidth, innerHeight);
+      cam.aspect = innerWidth / innerHeight;
+      cam.position.set(0, -0.3, innerWidth < innerHeight ? 26 : 15);
+      cam.lookAt(0, -0.4, 0);
+      cam.updateProjectionMatrix();
+    }
+    addEventListener("resize", tam); tam();
+    const reloj = new THREE.Clock();
+    let girar = true;
+    addEventListener("click", () => girar = !girar);
+    r.setAnimationLoop(() => {
+      const dt = reloj.getDelta(), t = reloj.elapsedTime;
+      aves.forEach((a, i) => {
+        if (girar) a.rotation.y += dt * 0.5;
+        if (Math.floor(t * 0.5 + i) % 6 === 0 && t > a.userData.cantarHasta + 2) cantar(a, t, 1);
+        animarAve(a, t, dt);
+        const p = a.position.clone().add(new THREE.Vector3(0, -0.45, 0)).project(cam);
+        const d = etiquetas.children[i];
+        d.style.left = (p.x * 0.5 + 0.5) * innerWidth + "px";
+        d.style.top = (-p.y * 0.5 + 0.5) * innerHeight + "px";
+      });
+      r.render(scene, cam);
+    });
+  </script>
+</body>
+</html>

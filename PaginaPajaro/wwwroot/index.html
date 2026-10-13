@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0E2621">
+  <title>Pájaro — Aves del campus UAO en Realidad Aumentada</title>
+  <meta name="description" content="Guía de avistamiento en Realidad Aumentada de las aves del campus de la Universidad Autónoma de Occidente, alimentada con la Guía ilustrada de aves UAO.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/estilos.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M4 20c6-2 9-8 16-8 3 0 5 2 7 4l-5 1c-3 6-10 9-18 3z' fill='%23F2A541'/></svg>">
+  <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+</head>
+<body>
+  <!-- ======================= PORTADA ======================= -->
+  <header class="hero" id="inicio">
+    <canvas id="cielo" aria-hidden="true"></canvas>
+    <div class="hero-contenido">
+      <p class="kicker">Universidad Autónoma de Occidente · Cali</p>
+      <h1>Pájaro</h1>
+      <p class="lema">Guía de avistamiento en <strong>Realidad Aumentada</strong> de las aves del campus UAO.</p>
+      <div class="hero-botones">
+        <button class="btn-principal" data-iniciar-ra>Iniciar la experiencia RA</button>
+        <a class="btn-sec claro" href="#guia">Explorar la guía</a>
+      </div>
+      <p class="nota-sonido">Usa el celular en vertical y con sonido. Te pediremos permiso para la cámara y el movimiento.</p>
+    </div>
+    <a class="bajar" href="#como" aria-label="Bajar"><span></span></a>
+  </header>
+
+  <nav class="barra" aria-label="Secciones">
+    <a href="#inicio" class="marca">Pájaro</a>
+    <div class="enlaces">
+      <a href="#como">Cómo funciona</a>
+      <a href="#guia">Guía UAO</a>
+      <a href="#libreta">Mi libreta</a>
+      <a href="#jornadas">Jornadas</a>
+    </div>
+    <button class="btn-ra-nav" data-iniciar-ra>Abrir RA</button>
+  </nav>
+
+  <main>
+    <!-- ======================= CÓMO FUNCIONA ======================= -->
+    <section id="como" class="seccion">
+      <div class="contenedor">
+        <p class="etiqueta revelar">Realidad Aumentada</p>
+        <h2 class="revelar">Las aves del campus, a tu alrededor</h2>
+        <p class="intro revelar">Abre la cámara y aparecerán aves 3D del campus UAO posadas a tu alrededor. Muévete con el celular como si estuvieras en una jornada de avistamiento y usa estas herramientas:</p>
+        <div class="interacciones">
+          <article class="inter revelar"><span>🔭</span><h3>1 · Avistar</h3><p>Busca las aves que te rodean con ayuda del radar y tócalas para registrarlas en tu libreta de campo.</p></article>
+          <article class="inter revelar"><span>🔍</span><h3>2 · Binoculares</h3><p>Acerca la vista y descubre las marcas que identifican a cada especie: colores, pico, cola…</p></article>
+          <article class="inter revelar"><span>🎵</span><h3>3 · Llamar</h3><p>Reproduce un canto y el ave que lo reconoce llegará volando para responderte.</p></article>
+          <article class="inter revelar"><span>🍌</span><h3>4 · Comedero</h3><p>Pon flores, frutas, agua, pasto o insectos y aprende qué come cada ave según quién llega.</p></article>
+          <article class="inter revelar"><span>📸</span><h3>5 · Foto de campo</h3><p>Toma una foto con el ave en tu entorno real y guárdala en tu libreta.</p></article>
+          <article class="inter revelar"><span>🎯</span><h3>6 · Quiz RA</h3><p>Tres aves aparecen frente a ti: toca la correcta según el nombre, la pista o el canto. ¡Gana la insignia de Guardián!</p></article>
+          <article class="inter revelar"><span>📍</span><h3>7 · Tamaño real</h3><p>En celulares Android compatibles, coloca un ave sobre el piso o una mesa y camina a su alrededor (WebXR).</p></article>
+        </div>
+        <div class="cta-ra revelar">
+          <button class="btn-principal" data-iniciar-ra>Iniciar la experiencia RA</button>
+          <p>Funciona en el navegador de Android (Chrome) y iPhone (Safari). Sin cámara, se abre un campus simulado.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= GUÍA ======================= -->
+    <section id="guia" class="seccion seccion-clara">
+      <div class="contenedor">
+        <p class="etiqueta revelar">Base de datos de aves UAO</p>
+        <h2 class="revelar">Guía de las aves del campus</h2>
+        <p class="intro revelar">Desde 2019 la Escuela de Turismo de la UAO realiza jornadas de monitoreo para conocer la riqueza de aves del campus sostenible. Esta guía se alimenta de esos registros.</p>
+        <div class="cifras">
+          <div class="cifra revelar"><span class="cifra-num" data-valor="84">0</span><p>especies registradas en el campus</p></div>
+          <div class="cifra revelar"><span class="cifra-num" data-valor="30">0</span><p>familias</p></div>
+          <div class="cifra revelar"><span class="cifra-num" data-valor="77">0</span><p>géneros</p></div>
+        </div>
+        <h3 class="subtitulo revelar">Fotografiadas en el campus</h3>
+        <div id="destacadas" class="destacadas"></div>
+        <h3 class="subtitulo revelar">Listado completo</h3>
+        <div class="buscador revelar">
+          <input id="buscar" type="search" placeholder="Busca por nombre común, científico o en inglés…" aria-label="Buscar ave">
+          <span id="conteo"></span>
+        </div>
+        <div id="listado" class="listado"></div>
+      </div>
+    </section>
+
+    <!-- ======================= LIBRETA ======================= -->
+    <section id="libreta" class="seccion">
+      <div class="contenedor">
+        <p class="etiqueta revelar">Tu progreso</p>
+        <h2 class="revelar">Mi libreta de campo</h2>
+        <p class="intro revelar">Las aves que registres en Realidad Aumentada, tus fotos y tu mejor puntaje del quiz se guardan en este dispositivo.</p>
+        <div class="libreta-resumen revelar">
+          <div><b id="lib-aves">0/12</b><span>aves registradas</span></div>
+          <div><b id="lib-fotos">0</b><span>fotos de campo</span></div>
+          <div><b id="lib-quiz">–</b><span>mejor quiz</span></div>
+          <div id="lib-insignia" class="insignia" hidden>🏅 Guardián de las Aves UAO</div>
+        </div>
+        <div id="lib-aves-grid" class="lib-grid"></div>
+        <div id="lib-fotos-grid" class="lib-fotos"></div>
+        <button id="lib-borrar" class="btn-sec">Reiniciar libreta</button>
+      </div>
+    </section>
+
+    <!-- ======================= JORNADAS ======================= -->
+    <section id="jornadas" class="seccion seccion-oscura">
+      <div class="contenedor">
+        <p class="etiqueta revelar">Un campus para la vida y la biodiversidad</p>
+        <h2 class="revelar">Jornadas de avistamiento</h2>
+        <p class="intro revelar">El sur de Cali hace parte de la cuenca del río Cauca, de su antigua red de humedales y del bosque seco tropical. Por eso el campus de la UAO es un refugio donde las aves encuentran lugar para residir, alimentarse, dormir y reproducirse.</p>
+        <div id="mosaico" class="mosaico"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <div class="contenedor">
+      <p class="marca-pie">Pájaro</p>
+      <p>Proyecto académico · Fundamentos de Realidad Virtual · Universidad Autónoma de Occidente.</p>
+      <p class="fuentes">Datos, textos y fotografías: <em>Guía ilustrada de las aves del campus de la UAO</em>, primera edición 2023, Escuela de Turismo UAO (autores: Germán Morales Zúñiga y Natalia Lenis Sánchez; fotografías: Juan Manuel Quintero, Natalia Lenis Sánchez y Diana Carolina Campo Daza). Más información de cada especie en WikiAves de la Universidad Icesi.
+      Modelos 3D y cantos de la experiencia RA recreados por código para este proyecto (no son grabaciones reales).</p>
+    </div>
+  </footer>
+
+  <!-- ======================= EXPERIENCIA RA ======================= -->
+  <div id="ra" class="ra" hidden>
+    <video id="ra-video" playsinline muted autoplay></video>
+    <div id="ra-lienzo" class="ra-lienzo"></div>
+    <div class="ra-binoculares" aria-hidden="true"></div>
+    <div id="ra-flash" class="ra-flash"></div>
+    <div id="ra-reticula" class="ra-reticula" aria-hidden="true"></div>
+    <div id="ra-marcas" class="ra-marcas" aria-live="polite"></div>
+
+    <div class="ra-arriba">
+      <button id="ra-salir" class="ra-icono" aria-label="Salir de la RA">✕</button>
+      <div class="ra-titulos"><b id="ra-titulo">Avistar</b><small id="ra-estado"></small></div>
+      <button id="ra-recentrar" class="ra-icono" aria-label="Volver a ubicar las aves frente a mí">⟲</button>
+    </div>
+    <canvas id="ra-radar" class="ra-radar" width="120" height="120" aria-hidden="true"></canvas>
+    <div id="ra-pregunta" class="ra-pregunta" hidden></div>
+    <div id="ra-aviso" class="ra-aviso" role="status"></div>
+    <div id="ra-panel" class="ra-panel" hidden></div>
+    <button id="ra-obturador" class="ra-obturador" aria-label="Tomar foto" hidden></button>
+
+    <div id="ra-ficha" class="ra-ficha" hidden></div>
+
+    <div class="ra-xr">
+      <button id="ra-xr" hidden>📍 Ver a tamaño real
+        <select id="ra-xr-especie" aria-label="Ave para colocar"></select>
+      </button>
+    </div>
+
+    <nav class="ra-modos" aria-label="Interacciones RA">
+      <button class="ra-modo" data-modo="avistar"><span>🔭</span>Avistar</button>
+      <button class="ra-modo" data-modo="binoculares"><span>🔍</span>Binoculares</button>
+      <button class="ra-modo" data-modo="llamar"><span>🎵</span>Llamar</button>
+      <button class="ra-modo" data-modo="comedero"><span>🍌</span>Comedero</button>
+      <button class="ra-modo" data-modo="foto"><span>📸</span>Foto</button>
+      <button class="ra-modo" data-modo="quiz"><span>🎯</span>Quiz</button>
+    </nav>
+  </div>
+  <div id="xr-ui" class="xr-ui" hidden>
+    <div class="xr-barra"><b id="xr-especie"></b><button id="xr-siguiente">Otra ave ▸</button><button id="xr-salir">Salir</button></div>
+    <p>Apunta al piso o a una mesa y toca la pantalla para colocar el ave.</p>
+  </div>
+
+  <script src="js/datos-uao.js"></script>
+  <script src="js/especies-ra.js"></script>
+  <script src="js/sonido.js"></script>
+  <script src="js/escena.js"></script>
+  <script src="js/app.js"></script>
+  <script type="module" src="js/ra/ra.js"></script>
+</body>
+</html>
