@@ -375,10 +375,10 @@ function abrirPanel(cual) {
   const p = $("#ra-panel");
   if (cual === "llamar") {
     p.innerHTML = `<p class="ra-panel-nota">Toca un canto. En la vida real usa el «playback» con moderación: puede estresar a las aves.</p>
-      <div class="ra-panel-lista">${E.map(e => `<button data-llamar="${e.id}"><i style="background:${e.colores.vientre};box-shadow:inset 0 0 0 4px ${e.colores.espalda}"></i>${e.nombre}</button>`).join("")}</div>`;
+      <div class="ra-panel-lista">${E.map(e => `<button data-llamar="${e.id}"><img src="img/aves/${e.id}.png" alt="">${e.nombre}</button>`).join("")}</div>`;
   } else {
-    const items = [["flores", "🌺", "Flores"], ["frutas", "🍌", "Frutas"], ["agua", "💧", "Agua"], ["pasto", "🌱", "Pasto"], ["insectos", "🦗", "Insectos"]];
-    p.innerHTML = `<p class="ra-panel-nota">¿Qué pones en el comedero?</p><div class="ra-panel-lista">${items.map(([k, ic, n]) => `<button data-comida="${k}"><b>${ic}</b>${n}</button>`).join("")}</div>`;
+    const items = [["flores", "flor", "Flores"], ["frutas", "fruta", "Frutas"], ["agua", "agua", "Agua"], ["pasto", "pasto", "Pasto"], ["insectos", "insecto", "Insectos"]];
+    p.innerHTML = `<p class="ra-panel-nota">¿Qué pones en el comedero?</p><div class="ra-panel-lista">${items.map(([k, ic, n]) => `<button data-comida="${k}"><b><svg class="ico"><use href="#i-${ic}"/></svg></b>${n}</button>`).join("")}</div>`;
   }
   p.hidden = false;
 }
@@ -472,7 +472,7 @@ function tomarFoto() {
   g.fillRect(0, h - h * 0.07, w, h * 0.07);
   g.fillStyle = "#F2A541";
   g.font = `700 ${Math.round(h * 0.028)}px Inter, sans-serif`;
-  g.fillText("Pájaro · Aves del campus UAO", w * 0.04, h - h * 0.025);
+  g.fillText("Pájaro - Aves del campus UAO", w * 0.04, h - h * 0.025);
   g.fillStyle = "#fff";
   g.textAlign = "right";
   g.fillText(new Date().toLocaleDateString("es-CO"), w * 0.96, h - h * 0.025);
@@ -494,7 +494,7 @@ function rondaQuiz() {
   [...aves.values()].forEach(irse);
   const q = quiz;
   if (q.ronda >= q.total) {
-    $("#ra-pregunta").innerHTML = `<b>${q.puntos}/${q.total}</b> ${q.puntos >= 4 ? "¡Eres un <strong>Guardián de las Aves UAO</strong>! 🏅" : "¡Buen intento! Repasa la guía y vuelve a jugar."}
+    $("#ra-pregunta").innerHTML = `<b>${q.puntos}/${q.total}</b> ${q.puntos >= 4 ? "¡Eres un <strong>Guardián de las Aves UAO</strong>! <svg class=\"ico\"><use href=\"#i-medalla\"/></svg>" : "¡Buen intento! Repasa la guía y vuelve a jugar."}
       <button id="ra-quiz-otra">Jugar otra vez</button>`;
     $("#ra-quiz-otra").onclick = () => { limpiarAves(); iniciarQuiz(); };
     lib()?.quiz(q.puntos);
@@ -508,9 +508,9 @@ function rondaQuiz() {
   let texto;
   if (tipo === 0) texto = `¿Cuál es el <strong>${objetivo.nombre}</strong>?`;
   else if (tipo === 1) texto = `¿Quién es? <em>${objetivo.pistas[Math.floor(Math.random() * objetivo.pistas.length)]}</em>`;
-  else texto = `¿Quién canta así? <button id="ra-quiz-oir">▶ Oír</button>`;
+  else texto = `¿Quién canta así? <button id="ra-quiz-oir"><svg class="ico"><use href="#i-play"/></svg> Oír</button>`;
   $("#ra-pregunta").hidden = false;
-  $("#ra-pregunta").innerHTML = `<small>Pregunta ${q.ronda + 1}/${q.total} · Puntos ${q.puntos}</small>${texto}`;
+  $("#ra-pregunta").innerHTML = `<small>Pregunta ${q.ronda + 1}/${q.total} - Puntos ${q.puntos}</small>${texto}`;
   if (tipo === 2) {
     setTimeout(() => Sonido.cantar(objetivo.canto, 1), 1500);
     $("#ra-quiz-oir").onclick = () => Sonido.cantar(objetivo.canto, 1);
@@ -604,7 +604,7 @@ function actualizarMarcas() {
     const x = (p.x * 0.5 + 0.5) * window.innerWidth, y = (-p.y * 0.5 + 0.5) * window.innerHeight;
     const lado = i % 2 ? 1 : -1;
     return `<div class="marca" style="left:${x}px;top:${y}px"><i></i><span class="${lado > 0 ? "der" : "izq"}" style="transform:translate(${lado > 0 ? 18 : "calc(-100% - 18px)"},${(i - 1) * 46}px)">${texto}</span></div>`;
-  }).join("") + `<div class="marca-nombre">${apuntada.esp.nombre} · <em>${apuntada.esp.cientifico}</em></div>`;
+  }).join("") + `<div class="marca-nombre">${apuntada.esp.nombre} <em>(${apuntada.esp.cientifico})</em></div>`;
 }
 
 function dibujarRadar() {

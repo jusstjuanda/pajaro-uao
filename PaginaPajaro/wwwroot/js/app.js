@@ -33,7 +33,7 @@
     $("#lib-aves-grid").innerHTML = E.map(e => {
       const ok = d.aves.includes(e.id);
       return `<div class="lib-ave ${ok ? "ok" : ""}">
-        <i style="background:${ok ? e.colores.vientre : "#cfc6b3"};box-shadow:inset 0 0 0 7px ${ok ? e.colores.espalda : "#bcb29c"}"></i>
+        <img src="img/aves/${e.id}.png" width="360" height="360" loading="lazy" alt="${ok ? e.nombre : ""}">
         <b>${ok ? e.nombre : "¿?"}</b><small>${ok ? e.cientifico : "Encuéntrala en RA"}</small></div>`;
     }).join("");
     $("#lib-fotos-grid").innerHTML = d.fotos.map((f, i) => `<a href="${f}" download="pajaro-uao-${i + 1}.jpg"><img src="${f}" alt="Foto de campo ${i + 1}"></a>`).join("");
@@ -43,15 +43,22 @@
   });
 
   // ---------------- guía UAO ----------------
+  // tamaño real de cada foto (ancho, alto): el navegador reserva el espacio antes de que cargue
+  const tamFoto = {
+    "bichofue": [1400, 927], "pechirrojo": [1400, 788], "pellar": [418, 316], "cocli": [532, 329], "loro-cabeciazul": [600, 450],
+    "guacamaya-cariseca": [1400, 788], "chilacoa": [409, 298], "mango-garganta-negra": [1400, 788], "sicalis": [1400, 927],
+    "pigua": [1400, 788], "carpintero-buchipecoso": [1080, 1080], "gavilan-pollero": [1400, 1400]
+  };
   const destacadas = Object.keys(U.fotos);
   $("#destacadas").innerHTML = destacadas.map(n => {
     const sp = U.lista.find(x => x.comun === n || x.comun.startsWith(n)) || { cientifico: "", familia: "" };
     const f = U.fichas[n] || U.fichas[n + " común"];
+    const [w, h] = tamFoto[U.fotos[n].split("/").pop().replace(".jpg", "")] || [3, 2];
     return `<article class="dest revelar">
-      <div class="dest-foto"><img loading="lazy" src="${U.fotos[n]}" alt="${n} fotografiado en el campus UAO"></div>
-      <div class="dest-texto"><h4>${n}</h4><p class="cientifico">${sp.cientifico} · ${sp.familia}</p>
+      <div class="dest-foto"><img loading="lazy" src="${U.fotos[n]}" width="${w}" height="${h}" alt="${n} fotografiado en el campus UAO"></div>
+      <div class="dest-texto"><h4>${n}</h4><p class="cientifico">${sp.cientifico} <span>(${sp.familia})</span></p>
       ${f ? `<p>${f.texto}</p>` : ""}
-      ${f?.wiki ? `<a href="${U.wiki(f.wiki)}" target="_blank" rel="noopener">Fotos y canto en WikiAves ↗</a>` : ""}</div>
+      ${f?.wiki ? `<a href="${U.wiki(f.wiki)}" target="_blank" rel="noopener">Fotos y canto en WikiAves</a>` : ""}</div>
     </article>`;
   }).join("");
 
@@ -69,7 +76,7 @@
           <span class="fam">${s.familia}${ra ? ' <i class="tag-ra">RA</i>' : ""}${U.fotos[s.comun] ? ' <i class="tag-foto">foto</i>' : ""}</span></summary>
           <div class="especie-cuerpo"><p class="ingles">${s.ingles}</p>
           ${ficha ? `<p>${ficha.texto}</p>` : "<p>Registrada en el listado general de aves del campus UAO.</p>"}
-          ${ficha?.wiki ? `<a href="${U.wiki(ficha.wiki)}" target="_blank" rel="noopener">Más información, galería y canto en WikiAves ↗</a>` : ""}
+          ${ficha?.wiki ? `<a href="${U.wiki(ficha.wiki)}" target="_blank" rel="noopener">Más información, galería y canto en WikiAves</a>` : ""}
           ${ra ? `<button class="btn-mini" data-iniciar-ra>Verla en Realidad Aumentada</button>` : ""}</div></details>`;
       }).join("")}</div>`).join("");
   }
@@ -77,8 +84,7 @@
   pintarListado();
 
   // ---------------- jornadas ----------------
-  $("#mosaico").innerHTML = U.jornadas.map((src, i) => `<figure class="revelar m${i}"><img loading="lazy" src="${src}" alt="Jornada de avistamiento de aves en el campus UAO"></figure>`).join("") +
-    `<figcaption class="mosaico-credito">Fotografías: Juan Manuel Quintero, Natalia Lenis Sánchez y Diana Carolina Campo Daza — Guía ilustrada de aves UAO 2023.</figcaption>`;
+  $("#mosaico").innerHTML = U.jornadas.map((src, i) => `<figure class="revelar m${i}"><img loading="lazy" src="${src}" alt="Jornada de avistamiento de aves en el campus UAO"></figure>`).join("");
 
   // ---------------- ficha dentro de la RA ----------------
   window.FichaRA = esp => {
@@ -89,8 +95,8 @@
       ${foto ? `<img src="${foto}" alt="${esp.nombre} en el campus UAO">` : ""}
       <h3>${esp.nombre}</h3><p class="cientifico">${esp.cientifico}</p>
       <p>${f ? f.texto : esp.pistas.join(". ") + "."}</p>
-      <div class="ra-ficha-botones"><button data-cantar="${esp.canto}">🎵 Escuchar</button>
-      ${f?.wiki ? `<a href="${U.wiki(f.wiki)}" target="_blank" rel="noopener">WikiAves ↗</a>` : ""}</div>`;
+      <div class="ra-ficha-botones"><button data-cantar="${esp.canto}"><svg class="ico"><use href="#i-llamar"/></svg> Escuchar</button>
+      ${f?.wiki ? `<a href="${U.wiki(f.wiki)}" target="_blank" rel="noopener">WikiAves</a>` : ""}</div>`;
     el.hidden = false;
     el.classList.remove("ver"); void el.offsetWidth; el.classList.add("ver");
     $(".ra-ficha-cerrar", el).onclick = () => { el.hidden = true; };

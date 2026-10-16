@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0E2621">
-  <title>Pájaro — Aves del campus UAO en Realidad Aumentada</title>
+  <title>Pájaro - Aves del campus UAO en Realidad Aumentada</title>
   <meta name="description" content="Guía de avistamiento en Realidad Aumentada de las aves del campus de la Universidad Autónoma de Occidente, alimentada con la Guía ilustrada de aves UAO.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,6 +14,24 @@
   <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
 </head>
 <body>
+  <!-- íconos de la interfaz de RA (se usan con <svg class="ico"><use href="#i-nombre"/></svg>) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-avistar" viewBox="0 0 24 24"><path d="M2.5 11c2.5-4.5 5.5-4.5 9.5 0 4-4.5 7-4.5 9.5 0"/><path d="M12 11v6.5"/></symbol>
+    <symbol id="i-binoculares" viewBox="0 0 24 24"><circle cx="7" cy="15.5" r="3.8"/><circle cx="17" cy="15.5" r="3.8"/><path d="M7 11.7V6.5h3.5v5.2M17 11.7V6.5h-3.5v5.2M10.8 15.5h2.4"/></symbol>
+    <symbol id="i-llamar" viewBox="0 0 24 24"><path d="M9 18V6.5l10-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></symbol>
+    <symbol id="i-comedero" viewBox="0 0 24 24"><path d="M12 2.5v3"/><path d="M4.5 11 12 5.5 19.5 11z"/><path d="M7 11v7h10v-7"/><path d="M4 21h16"/></symbol>
+    <symbol id="i-foto" viewBox="0 0 24 24"><path d="M3.5 8h3.3l1.7-2.5h7L17.2 8h3.3v11h-17z"/><circle cx="12" cy="13.5" r="3.6"/></symbol>
+    <symbol id="i-quiz" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.1"/></symbol>
+    <symbol id="i-tamano" viewBox="0 0 24 24"><path d="M12 21.5s-6.5-5.7-6.5-11.5a6.5 6.5 0 0 1 13 0c0 5.8-6.5 11.5-6.5 11.5z"/><circle cx="12" cy="10" r="2.3"/></symbol>
+    <symbol id="i-medalla" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5.5"/><path d="M8.6 13.4 7 21l5-2.6 5 2.6-1.6-7.6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></symbol>
+    <symbol id="i-flor" viewBox="0 0 24 24"><path d="M12 21v-9"/><path d="M12 12c-4 0-5-4-5-7 2 0 4 1 5 3 1-2 3-3 5-3 0 3-1 7-5 7z"/><path d="M12 17.5c-2.2 0-3.8-1-4.8-2.8"/></symbol>
+    <symbol id="i-fruta" viewBox="0 0 24 24"><path d="M12 8c-3-2-7 0-7 5 0 4 3 8 7 8s7-4 7-8c0-5-4-7-7-5z"/><path d="M12 8c0-2 1-4 3-5"/></symbol>
+    <symbol id="i-agua" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+    <symbol id="i-pasto" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M8 20c0-5-1-8-3-10M12 20V7M16 20c0-5 1-8 3-10"/></symbol>
+    <symbol id="i-insecto" viewBox="0 0 24 24"><ellipse cx="12" cy="14" rx="4" ry="5.5"/><path d="M12 8.5V4.5M9.5 5.5 12 8.5l2.5-3M8 12H4M8.3 16.5 5 19M16 12h4M15.7 16.5 19 19"/></symbol>
+  </svg>
+
   <!-- ======================= PORTADA ======================= -->
   <header class="hero" id="inicio">
     <canvas id="cielo" aria-hidden="true"></canvas>
@@ -46,20 +64,20 @@
     <section id="como" class="seccion">
       <div class="contenedor">
         <p class="etiqueta revelar">Realidad Aumentada</p>
-        <h2 class="revelar">Las aves del campus, a tu alrededor</h2>
+        <h2 class="revelar">Las aves del campus UAO</h2>
         <p class="intro revelar">Abre la cámara y aparecerán aves 3D del campus UAO posadas a tu alrededor. Muévete con el celular como si estuvieras en una jornada de avistamiento y usa estas herramientas:</p>
         <div class="interacciones">
-          <article class="inter revelar"><span>🔭</span><h3>1 · Avistar</h3><p>Busca las aves que te rodean con ayuda del radar y tócalas para registrarlas en tu libreta de campo.</p></article>
-          <article class="inter revelar"><span>🔍</span><h3>2 · Binoculares</h3><p>Acerca la vista y descubre las marcas que identifican a cada especie: colores, pico, cola…</p></article>
-          <article class="inter revelar"><span>🎵</span><h3>3 · Llamar</h3><p>Reproduce un canto y el ave que lo reconoce llegará volando para responderte.</p></article>
-          <article class="inter revelar"><span>🍌</span><h3>4 · Comedero</h3><p>Pon flores, frutas, agua, pasto o insectos y aprende qué come cada ave según quién llega.</p></article>
-          <article class="inter revelar"><span>📸</span><h3>5 · Foto de campo</h3><p>Toma una foto con el ave en tu entorno real y guárdala en tu libreta.</p></article>
-          <article class="inter revelar"><span>🎯</span><h3>6 · Quiz RA</h3><p>Tres aves aparecen frente a ti: toca la correcta según el nombre, la pista o el canto. ¡Gana la insignia de Guardián!</p></article>
-          <article class="inter revelar"><span>📍</span><h3>7 · Tamaño real</h3><p>En celulares Android compatibles, coloca un ave sobre el piso o una mesa y camina a su alrededor (WebXR).</p></article>
-        </div>
-        <div class="cta-ra revelar">
-          <button class="btn-principal" data-iniciar-ra>Iniciar la experiencia RA</button>
-          <p>Funciona en el navegador de Android (Chrome) y iPhone (Safari). Sin cámara, se abre un campus simulado.</p>
+          <article class="inter revelar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 11c2.5-4.5 5.5-4.5 9.5 0 4-4.5 7-4.5 9.5 0"/><path d="M12 11v6.5"/></svg><h3>1. Avistar</h3><p>Busca las aves que te rodean con ayuda del radar y tócalas para registrarlas en tu libreta de campo.</p></article>
+          <article class="inter revelar"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="15.5" r="3.8"/><circle cx="17" cy="15.5" r="3.8"/><path d="M7 11.7V6.5h3.5v5.2M17 11.7V6.5h-3.5v5.2M10.8 15.5h2.4"/></svg><h3>2. Binoculares</h3><p>Acerca la vista y descubre las marcas que identifican a cada especie: colores, pico y cola.</p></article>
+          <article class="inter revelar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6.5l10-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg><h3>3. Llamar</h3><p>Reproduce un canto y el ave que lo reconoce llegará volando para responderte.</p></article>
+          <article class="inter revelar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5v3"/><path d="M4.5 11 12 5.5 19.5 11z"/><path d="M7 11v7h10v-7"/><path d="M4 21h16"/></svg><h3>4. Comedero</h3><p>Pon flores, frutas, agua, pasto o insectos y aprende qué come cada ave según quién llega.</p></article>
+          <article class="inter revelar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8h3.3l1.7-2.5h7L17.2 8h3.3v11h-17z"/><circle cx="12" cy="13.5" r="3.6"/></svg><h3>5. Foto de campo</h3><p>Toma una foto con el ave en tu entorno real y guárdala en tu libreta.</p></article>
+          <article class="inter revelar"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.1"/></svg><h3>6. Quiz RA</h3><p>Tres aves aparecen frente a ti: toca la correcta según el nombre, la pista o el canto. ¡Gana la insignia de Guardián!</p></article>
+          <article class="inter revelar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.5s-6.5-5.7-6.5-11.5a6.5 6.5 0 0 1 13 0c0 5.8-6.5 11.5-6.5 11.5z"/><circle cx="12" cy="10" r="2.3"/></svg><h3>7. Tamaño real</h3><p>En celulares Android compatibles, coloca un ave sobre el piso o una mesa y camina a su alrededor (WebXR).</p></article>
+          <div class="cta-ra revelar">
+            <button class="btn-principal" data-iniciar-ra>Iniciar la experiencia RA</button>
+            <p>Funciona en el navegador de Android (Chrome) y iPhone (Safari). Sin cámara, se abre un campus simulado.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -96,7 +114,7 @@
           <div><b id="lib-aves">0/12</b><span>aves registradas</span></div>
           <div><b id="lib-fotos">0</b><span>fotos de campo</span></div>
           <div><b id="lib-quiz">–</b><span>mejor quiz</span></div>
-          <div id="lib-insignia" class="insignia" hidden>🏅 Guardián de las Aves UAO</div>
+          <div id="lib-insignia" class="insignia" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="5.5"/><path d="M8.6 13.4 7 21l5-2.6 5 2.6-1.6-7.6"/></svg>Guardián de las Aves UAO</div>
         </div>
         <div id="lib-aves-grid" class="lib-grid"></div>
         <div id="lib-fotos-grid" class="lib-fotos"></div>
@@ -111,6 +129,7 @@
         <h2 class="revelar">Jornadas de avistamiento</h2>
         <p class="intro revelar">El sur de Cali hace parte de la cuenca del río Cauca, de su antigua red de humedales y del bosque seco tropical. Por eso el campus de la UAO es un refugio donde las aves encuentran lugar para residir, alimentarse, dormir y reproducirse.</p>
         <div id="mosaico" class="mosaico"></div>
+        <p class="mosaico-credito">Fotografías: Juan Manuel Quintero, Natalia Lenis Sánchez y Diana Carolina Campo Daza. Guía ilustrada de aves UAO 2023.</p>
       </div>
     </section>
   </main>
@@ -118,7 +137,7 @@
   <footer class="pie">
     <div class="contenedor">
       <p class="marca-pie">Pájaro</p>
-      <p>Proyecto académico · Fundamentos de Realidad Virtual · Universidad Autónoma de Occidente.</p>
+      <p>Proyecto académico. Fundamentos de Realidad Virtual. Universidad Autónoma de Occidente.</p>
       <p class="fuentes">Datos, textos y fotografías: <em>Guía ilustrada de las aves del campus de la UAO</em>, primera edición 2023, Escuela de Turismo UAO (autores: Germán Morales Zúñiga y Natalia Lenis Sánchez; fotografías: Juan Manuel Quintero, Natalia Lenis Sánchez y Diana Carolina Campo Daza). Más información de cada especie en WikiAves de la Universidad Icesi.
       Modelos 3D y cantos de la experiencia RA recreados por código para este proyecto (no son grabaciones reales).</p>
     </div>
@@ -147,18 +166,18 @@
     <div id="ra-ficha" class="ra-ficha" hidden></div>
 
     <div class="ra-xr">
-      <button id="ra-xr" hidden>📍 Ver a tamaño real
+      <button id="ra-xr" hidden><span><svg class="ico"><use href="#i-tamano"/></svg> Ver a tamaño real</span>
         <select id="ra-xr-especie" aria-label="Ave para colocar"></select>
       </button>
     </div>
 
     <nav class="ra-modos" aria-label="Interacciones RA">
-      <button class="ra-modo" data-modo="avistar"><span>🔭</span>Avistar</button>
-      <button class="ra-modo" data-modo="binoculares"><span>🔍</span>Binoculares</button>
-      <button class="ra-modo" data-modo="llamar"><span>🎵</span>Llamar</button>
-      <button class="ra-modo" data-modo="comedero"><span>🍌</span>Comedero</button>
-      <button class="ra-modo" data-modo="foto"><span>📸</span>Foto</button>
-      <button class="ra-modo" data-modo="quiz"><span>🎯</span>Quiz</button>
+      <button class="ra-modo" data-modo="avistar"><span><svg class="ico"><use href="#i-avistar"/></svg></span>Avistar</button>
+      <button class="ra-modo" data-modo="binoculares"><span><svg class="ico"><use href="#i-binoculares"/></svg></span>Binoculares</button>
+      <button class="ra-modo" data-modo="llamar"><span><svg class="ico"><use href="#i-llamar"/></svg></span>Llamar</button>
+      <button class="ra-modo" data-modo="comedero"><span><svg class="ico"><use href="#i-comedero"/></svg></span>Comedero</button>
+      <button class="ra-modo" data-modo="foto"><span><svg class="ico"><use href="#i-foto"/></svg></span>Foto</button>
+      <button class="ra-modo" data-modo="quiz"><span><svg class="ico"><use href="#i-quiz"/></svg></span>Quiz</button>
     </nav>
   </div>
   <div id="xr-ui" class="xr-ui" hidden>
