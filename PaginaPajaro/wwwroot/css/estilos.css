@@ -175,9 +175,11 @@ button { font: inherit; cursor: pointer; }
 .ra-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
 .ra-flash.ver { animation: flash .5s ease-out; }
 @keyframes flash { 0% { opacity: .9; } 100% { opacity: 0; } }
-.ra-binoculares { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
-  background: radial-gradient(circle at 34% 50%, transparent 0 min(30vw, 22vh), transparent 0), radial-gradient(circle at 66% 50%, transparent 0 min(30vw, 22vh), transparent 0);
-  -webkit-mask: radial-gradient(circle at 32% 50%, transparent min(31vw, 24vh), #000 calc(min(31vw, 24vh) + 2px)), radial-gradient(circle at 68% 50%, transparent min(31vw, 24vh), #000 calc(min(31vw, 24vh) + 2px));
+/* Las dos lentes se miden con el radio --lente y su separación depende de ese radio, no del ancho de la pantalla:
+   así siempre se solapan en el centro (donde está la mira), en celular vertical y en pantallas anchas. */
+.ra-binoculares { --lente: min(31vw, 36vh); --sep: calc(var(--lente) * .58);
+  position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
+  -webkit-mask: radial-gradient(circle at calc(50% - var(--sep)) 50%, transparent var(--lente), #000 calc(var(--lente) + 2px)), radial-gradient(circle at calc(50% + var(--sep)) 50%, transparent var(--lente), #000 calc(var(--lente) + 2px));
   -webkit-mask-composite: source-in; mask-composite: intersect; background-color: rgba(5,12,10,.92); }
 body.ra-zoom .ra-binoculares { opacity: 1; }
 .ra-marcas { position: absolute; inset: 0; pointer-events: none; }
