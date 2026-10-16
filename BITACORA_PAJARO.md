@@ -34,7 +34,14 @@ Archivos: `index.html`, `css/estilos.css`, `galeria3d.html`, `js/app.js` (guía,
 ## 5. Pruebas: qué sí y qué no
 Sí: vista previa del PC (modo simulado), celular emulado 375×812 y escritorio 1100×760; Quiz 5/5, Llamar ×8, etiquetas de las 12 aves (0 cruces), salir/reentrar, buscador, galería. **No**: celular real (cámara, giroscopio, audio), iPhone, WebXR/Tamaño real (el botón XR y el tope de aves se probaron solo simulando). Hugo no ha reportado pruebas en su celular: **pendiente probar en Android/iPhone con la página publicada.**
 
-## 6. PARA MAÑANA (sesión nueva)
+## 5b. Día 2 (2026-10-17 por la mañana): bugs del quiz (hechos, probados en celular emulado 375 y 320 px; sin commit)
+Pedidos por Hugo con capturas. Orden del día: (1) bugs, (2) paso 6, (3) brainstorm de valor añadido desde la guía.
+1. **Quiz: algunas aves salían ya con su nombre (spoiler).** Causa: `agregarAve` en `ra.js` ponía la etiqueta de nombre a toda ave ya registrada en la libreta, también en el quiz. Arreglo: `&& modo !== "quiz"`. Probado con las 12 aves registradas: en Avistar salen los nombres, en el quiz ninguno hasta responder.
+2. **Etiqueta «¡Correcto! …» salía cortada («orrecto! Garza de gana»).** Causa doble: (a) el texto era más largo que la imagen de la etiqueta (`etiqueta()` en `aves3d.js`, lienzo fijo 512×128) y (b) la etiqueta es un sprite 3D que no se ajustaba a los bordes de la pantalla. Arreglo: `etiqueta()` acepta saltos de línea (`"¡Correcto!\nNombre"` → dos renglones; el lienzo crece) y achica la letra si un renglón no cabe; nueva `mantenerEtiqueta(a)` en `ra.js` (se llama en `ciclo()`): corre la etiqueta hacia adentro de la pantalla (margen 10 px), la achica si fuera más ancha que la pantalla y no la pega al borde si el ave está fuera de la vista. Probado con el ave en el borde: etiqueta entera visible (10–152 px de 375).
+3. **Revisión de otros textos fuera de margen:** `.marca-nombre` (nombre del ave en binoculares) ya se parte en líneas y no pasa de `100% - 24px`; la **barra de modos de la RA** desbordaba en celulares de 375 px o menos (el botón «Quiz» quedaba cortado: 401 px de contenido en 375) → `@media (max-width: 420px)` y `(max-width: 345px)` en `estilos.css` reparten los 6 botones sin cortar texto (probado 375 y 320). Barrido de todos los modos de RA, ficha y la página a 320 px: nada fuera de pantalla.
+- Ganchos de prueba nuevos: `RA._prueba.etiquetas()` y `mirarA(i, alto, giro)`; `estado()` incluye `etiq` por ave.
+
+## 6. PARA HOY / MAÑANA (sesión nueva)
 1. **Paso 6 — mejoras gráficas de la RA:** aves y soportes menos low-poly, campus simulado más completo (fuentes, vegetación, suelo con detalle, llenar vacíos). Proponer opciones y mostrar antes/después. Cuidar rendimiento en celular y no romper `plantarArboles`/`sitioLibre`/`sitioComedero`. Si cambian los modelos de las aves, **regenerar `img/aves/*.png`** (servidor `pajaro-guardar`, puerto 5147; apagarlo después).
 2. **Fase final:** ver con Hugo si hay algo más de valor (lista de él; no inventar).
 3. Pendientes heredados: probar en celular real, colaboradores del repo, video corto (opcional), guion del pitch, QR del enlace.

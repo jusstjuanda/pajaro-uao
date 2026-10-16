@@ -335,19 +335,28 @@ export function celebrar(r, t) {
 }
 
 // --------------------------------------------------------------- etiqueta flotante
+// El texto puede llevar saltos de línea («\n»): cada renglón es una fila de la etiqueta. Si un renglón no cabe en el ancho,
+// se achica su letra hasta que quepa (antes el texto largo se cortaba en los bordes de la etiqueta).
 export function etiqueta(texto, color = "#F2A541") {
+  const lineas = String(texto).split("\n");
   const cv = document.createElement("canvas");
-  cv.width = 512; cv.height = 128;
+  cv.width = 512; cv.height = 128 + (lineas.length - 1) * 60;
   const g = cv.getContext("2d");
   g.fillStyle = "rgba(14,38,33,.85)";
-  g.beginPath(); g.roundRect(8, 20, 496, 88, 44); g.fill();
+  g.beginPath(); g.roundRect(8, 20, 496, cv.height - 40, 44); g.fill();
   g.strokeStyle = color; g.lineWidth = 5; g.stroke();
-  g.fillStyle = "#fff"; g.font = "600 46px Inter, system-ui, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
-  g.fillText(texto, 256, 66);
+  g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle";
+  lineas.forEach((l, i) => {
+    let px = 46;
+    g.font = `600 ${px}px Inter, system-ui, sans-serif`;
+    const ancho = g.measureText(l).width;
+    if (ancho > 440) { px = Math.max(24, Math.floor(px * 440 / ancho)); g.font = `600 ${px}px Inter, system-ui, sans-serif`; }
+    g.fillText(l, 256, cv.height / 2 + (i - (lineas.length - 1) / 2) * 60 + 2);
+  });
   const t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
-  s.scale.set(1.6, 0.4, 1);
+  s.scale.set(1.6, 0.4 * cv.height / 128, 1);
   s.renderOrder = 10;
   return s;
 }

@@ -208,7 +208,7 @@ function agregarAve(id, pos, opciones = {}) {
   const a = { uid: ++uid, obj, esp, registrada: lib()?.tiene(id) || false, vuelo: null, etiqueta: null, soporte: null, ...datos };
   aves.set(a.uid, a);
   if (!sinSoporte) ponerSoporte(a, obj);
-  if (a.registrada && opciones.conEtiqueta !== false) ponerEtiqueta(a);
+  if (a.registrada && opciones.conEtiqueta !== false && modo !== "quiz") ponerEtiqueta(a);   // en el quiz el nombre no se muestra: sería la respuesta
   return a;
 }
 function quitarAve(a) {
@@ -307,8 +307,41 @@ function ponerEtiqueta(a, texto, color) {
   const s = etiqueta(texto || a.esp.nombre, color);
   s.position.set(0, a.esp.tipo === "garza" ? 3.6 : a.esp.tipo === "pellar" ? 2.7 : 2.2, 0);
   s.scale.multiplyScalar(1 / (a.esp.escala / 0.4));
+  s.userData.reposo = s.position.clone();   // dónde queda sobre el ave; mantenerEtiqueta la mueve de ahí solo si se saldría de la pantalla
+  s.userData.escala = s.scale.clone();
   a.obj.add(s);
   a.etiqueta = s;
+}
+// Mantiene la etiqueta de un ave dentro de la pantalla: si el ave está cerca de un borde, la etiqueta se corre hacia adentro
+// (en horizontal) y, si fuera más ancha que la pantalla, se achica. Se vuelve a calcular en cada cuadro.
+const _c = new THREE.Vector3(), _l = new THREE.Vector3(), _der = new THREE.Vector3(), _esc = new THREE.Vector3();
+function mantenerEtiqueta(a) {
+  const s = a.etiqueta;
+  if (!s) return;
+  s.position.copy(s.userData.reposo);
+  s.scale.copy(s.userData.escala);
+  a.obj.updateMatrixWorld(true);
+  s.getWorldPosition(_c);
+  s.getWorldScale(_esc);
+  _der.set(1, 0, 0).applyQuaternion(camera.quaternion);                // la derecha de la pantalla, en el mundo
+  const centro = _c.clone().project(camera);
+  if (centro.z > 1) return;                                            // detrás de la cámara: no se ve
+  const W = window.innerWidth, margen = 10;
+  const x = (centro.x * 0.5 + 0.5) * W;
+  const lado = _l.copy(_c).addScaledVector(_der, _esc.x / 2).project(camera);
+  const medio = Math.abs(lado.x - centro.x) * W / 2;                   // mitad del ancho de la etiqueta, en píxeles
+  if (medio < 1 || x < -medio || x > W + medio) return;               // ave fuera de la pantalla: su etiqueta tampoco se muestra pegada al borde
+  if (medio * 2 > W - margen * 2) {                                    // más ancha que la pantalla: se achica para que quepa
+    const k = (W - margen * 2) / (medio * 2);
+    s.scale.multiplyScalar(k);
+    _esc.multiplyScalar(k);
+    return mover(s, (W / 2 - x) * (_esc.x / 2) / (medio * k));        // y se centra en la pantalla
+  }
+  const dx = x - medio < margen ? margen - (x - medio) : x + medio > W - margen ? (W - margen) - (x + medio) : 0;   // píxeles hacia adentro
+  if (dx) mover(s, dx * (_esc.x / 2) / medio);
+}
+function mover(s, metros) {   // corre la etiqueta `metros` hacia la derecha de la pantalla (negativo: a la izquierda)
+  s.position.copy(s.parent.worldToLocal(_c.clone().addScaledVector(_der, metros)));
 }
 // vuelo desde lejos hasta un punto (curva con aleteo)
 // El soporte de donde despega se queda y se desvanece; el del destino ya está esperando y crece al acercarse el ave.
@@ -611,12 +644,12 @@ function responderQuiz(a) {
     hacerCantar(a);
     confeti(a.obj.position.clone().add(new THREE.Vector3(0, 0.5, 0)));
     Sonido.exito();
-    ponerEtiqueta(a, "¡Correcto! " + a.esp.nombre, "#8EE68E");
+    ponerEtiqueta(a, "¡Correcto!\n" + a.esp.nombre, "#8EE68E");
   } else {
     Sonido.error();
     ponerEtiqueta(a, a.esp.nombre, "#E4673E");
     const ok = [...aves.values()].find(x => x.esp === q.objetivo);
-    if (ok) { ponerEtiqueta(ok, "Era: " + ok.esp.nombre, "#8EE68E"); celebrar(ok.obj, reloj.elapsedTime); }
+    if (ok) { ponerEtiqueta(ok, "Era:\n" + ok.esp.nombre, "#8EE68E"); celebrar(ok.obj, reloj.elapsedTime); }
   }
   q.ronda++;
   despues(rondaQuiz, 2600);
@@ -777,6 +810,9 @@ function ciclo() {
     if (p.obj.material) p.obj.material.opacity = Math.max(0, 1 - p.t / p.vida), p.obj.material.transparent = true;
     if (p.t > p.vida) { raiz.remove(p.obj); particulas.splice(i, 1); }
   }
+  // etiquetas de las aves: que no se salgan de la pantalla
+  camera.updateMatrixWorld();
+  for (const a of aves.values()) mantenerEtiqueta(a);
   // ave apuntada por la retícula
   ray.setFromCamera(new THREE.Vector2(0, 0), camera);
   const hit = ray.intersectObjects([...aves.values()].filter(a => !a.vuelo).map(a => a.obj.userData.zona), false)[0];
@@ -940,7 +976,11 @@ window.RA = {
   iniciar, salir, cambiarModo,
   _prueba: {
     tocarPrimera, tocarCorrecta: () => tocarPrimera(a => quiz && a.esp === quiz.objetivo && a.quiz),
-    mirarA: (i = 0, alto = 0.25) => { const a = [...aves.values()].filter(x => !x.vuelo)[i]; if (a) { arrastre.yaw = Math.atan2(a.obj.position.x, -a.obj.position.z); arrastre.pitch = -Math.asin((a.obj.position.y + alto) / a.obj.position.length()); } return a?.esp.id; },
-    estado: () => ({ modo, fov: camera?.fov, aves: [...aves.values()].map(a => ({ id: a.esp.id, vuelo: !!a.vuelo, reg: a.registrada })), quiz: quiz && { ronda: quiz.ronda, puntos: quiz.puntos } })
+    mirarA: (i = 0, alto = 0.25, giro = 0) => { const a = [...aves.values()].filter(x => !x.vuelo)[i]; if (a) { arrastre.yaw = Math.atan2(a.obj.position.x, -a.obj.position.z) + giro; arrastre.pitch = -Math.asin((a.obj.position.y + alto) / a.obj.position.length()); } return a?.esp.id; },
+    // dónde quedan (en píxeles) los bordes izquierdo y derecho de cada etiqueta de ave
+    etiquetas: () => { camera.updateMatrixWorld(); const d = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion), W = window.innerWidth;
+      return [...aves.values()].filter(a => a.etiqueta).map(a => { const c = a.etiqueta.getWorldPosition(new THREE.Vector3()), e = a.etiqueta.getWorldScale(new THREE.Vector3()).x / 2, px = v => Math.round((v.project(camera).x * 0.5 + 0.5) * W);
+        return { id: a.esp.id, izq: px(c.clone().addScaledVector(d, -e)), der: px(c.clone().addScaledVector(d, e)), ancho: W }; }); },
+    estado: () => ({ modo, fov: camera?.fov, aves: [...aves.values()].map(a => ({ id: a.esp.id, vuelo: !!a.vuelo, reg: a.registrada, etiq: !!a.etiqueta })), quiz: quiz && { ronda: quiz.ronda, puntos: quiz.puntos } })
   }
 };
