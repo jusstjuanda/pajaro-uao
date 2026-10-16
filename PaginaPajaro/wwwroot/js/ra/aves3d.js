@@ -395,6 +395,38 @@ export function etiqueta(texto, color = "#F2A541") {
   return s;
 }
 
+// Tarjeta flotante con una opción de respuesta del quiz: el texto se parte en líneas y, si hace falta, se achica para que quepa.
+export function tarjeta(texto, color = "#2F6B4F") {
+  const cv = document.createElement("canvas");
+  cv.width = 512; cv.height = 320;
+  const g = cv.getContext("2d");
+  g.fillStyle = "rgba(255,251,242,.97)";
+  g.beginPath(); g.roundRect(8, 8, 496, 304, 36); g.fill();
+  g.strokeStyle = color; g.lineWidth = 8; g.stroke();
+  let px = 46;
+  const partir = () => {
+    g.font = `700 ${px}px Inter, system-ui, sans-serif`;
+    const lineas = [];
+    let linea = "";
+    for (const w of texto.split(" ")) {
+      const prueba = linea ? linea + " " + w : w;
+      if (g.measureText(prueba).width > 440 && linea) { lineas.push(linea); linea = w; } else linea = prueba;
+    }
+    lineas.push(linea);
+    return lineas;
+  };
+  let lineas = partir();
+  while ((lineas.length > 4 || lineas.length * px * 1.2 > 260) && px > 24) { px -= 3; lineas = partir(); }
+  g.fillStyle = "#1D2A25"; g.textAlign = "center"; g.textBaseline = "middle";
+  lineas.forEach((l, i) => g.fillText(l, 256, 160 + (i - (lineas.length - 1) / 2) * px * 1.2));
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
+  s.scale.set(1.25, 0.78, 1);
+  s.renderOrder = 10;
+  return s;
+}
+
 export function notaMusical() {
   const cv = document.createElement("canvas");
   cv.width = cv.height = 64;

@@ -1,7 +1,7 @@
 // Motor de Realidad Aumentada de «Aves UAO»: cámara + giroscopio (Android/iOS), modo simulado,
 // 6 interacciones RA (avistar, binoculares, llamar, comedero, foto, quiz) y colocación WebXR (Android).
 import * as THREE from "three";
-import { crearAve, crearSoporte, animarAve, cantar, aletear, celebrar, etiqueta, notaMusical } from "./aves3d.js";
+import { crearAve, crearSoporte, animarAve, cantar, aletear, celebrar, etiqueta, tarjeta, notaMusical } from "./aves3d.js";
 import { crearSimulado, radioDe, OBSTACULOS } from "./campus.js";
 
 const E = window.ESPECIES_RA;
@@ -91,6 +91,7 @@ function cancelarPendientes() {
 }
 function limpiarAves() {
   cancelarPendientes();
+  limpiarOpciones();
   [...aves.values()].forEach(quitarAve);
   soportesSaliendo.splice(0).forEach(s => raiz.remove(s.g));
   objetos.forEach(o => raiz.remove(o));
@@ -316,9 +317,9 @@ const MODOS = {
     tocar(a) { hacerCantar(a); registrarAve(a); }
   },
   quiz: {
-    titulo: "Quiz RA", ayuda: "Lee la pregunta y toca el ave correcta entre las que aparecen.",
+    titulo: "Quiz RA", ayuda: "Lee la pregunta y toca la respuesta correcta. Tienes dos vidas.",
     entrar() { limpiarAves(); iniciarQuiz(); },
-    salir() { quiz = null; $("#ra-pregunta").hidden = true; },
+    salir() { if (quiz?.aciertos) lib()?.quiz(quiz.aciertos); quiz = null; limpiarAves(); $("#ra-pregunta").hidden = true; },   // si se sale a medias, se guarda lo conseguido
     tocar(a) { responderQuiz(a); }
   }
 };
@@ -468,52 +469,186 @@ function tomarFoto() {
 }
 
 // ---------------- quiz
+// Reto de hasta 20 preguntas con 2 vidas: se acaba al segundo error o al llegar a 20. Las preguntas se mezclan en ciclos:
+// aves (nombre, pista o canto, con 3 aves que llegan volando), entorno UAO y ecología de las aves (tarjetas flotantes o alimentos en 3D).
+// Las de entorno y ecología muestran un dato curioso al responder y dejan tiempo para leerlo.
+const TOPE_QUIZ = 20, VIDAS_QUIZ = 2, ACIERTOS_GUARDIAN = 10;
+let opcionesQuiz = [];            // opciones 3D (tarjetas o alimentos) de la pregunta actual: { g, zona, visual, alto, ok }
+const NOMBRE_COMIDA = { flores: "Flores", frutas: "Frutas", insectos: "Insectos" };
+
+// Preguntas del entorno UAO (aprobadas por Hugo). mal = las dos respuestas incorrectas.
+const PREGUNTAS_CAMPUS = [
+  { p: "¿Cuántas especies de aves se han registrado en el campus?", ok: "84 especies", mal: ["48 especies", "120 especies"], dato: "Pertenecen a 30 familias y 77 géneros, según los monitoreos hechos en el campus." },
+  { p: "¿Qué parte del campus son zonas verdes y jardines?", ok: "45,5 %", mal: ["15 %", "30 %"], dato: "Son el comedor, el dormitorio y el nido de muchas aves." },
+  { p: "¿Qué hacen las aves en los jardines y árboles del campus?", ok: "Residen, se alimentan, duermen y se reproducen", mal: ["Solo pasan de largo", "Solo toman agua"], dato: "Por eso cuidar los árboles y jardines es cuidar a las aves." },
+  { p: "¿A qué hora se ven más aves activas?", ok: "Al amanecer", mal: ["Al mediodía", "De noche"], dato: "Después del amanecer cantan y buscan alimento: es la mejor hora para avistar." },
+  { p: "¿Cuál de estas aves del campus llega del norte del continente a pasar el invierno?", ok: "Piranga abejera", mal: ["Bichofué", "Garrapatero"], dato: "Es migratoria. También llegan el zorzal buchipecoso, la reinita dorada y el cuco americano." },
+  { p: "¿Desde qué año se hacen jornadas de monitoreo de aves en el campus?", ok: "2019", mal: ["2010", "2023"], dato: "Desde 2019 se hacen jornadas de monitoreo para conocer la riqueza de aves del campus." },
+  { p: "¿Cuántos edificios de aulas tiene el campus?", ok: "4", mal: ["3", "6"], dato: "Son las Aulas 1, 2, 3 y 4." }
+];
+// Dónde viven y cómo se comportan las aves de la RA (datos de las fichas de la guía)
+const PREGUNTAS_HABITAT = [
+  { id: "pellar", p: "¿Dónde vive el pellar?", ok: "En prados y zonas abiertas", mal: ["En el interior del bosque", "Sobre el agua"], dato: "Vive en pares o grupos, y su llamada áspera y fuerte delata su presencia." },
+  { id: "pechirrojo", p: "¿Dónde se posa el pechirrojo?", ok: "En cercas y postes", mal: ["En el suelo del bosque", "En huecos de troncos"], dato: "Desde ahí vigila y caza insectos." },
+  { id: "azulejo", p: "¿Dónde se posa el azulejo común?", ok: "En cables y en la parte alta de los árboles", mal: ["En el suelo", "Dentro de cuevas"], dato: "Es común en pueblos, jardines y campos con árboles grandes." },
+  { id: "garza", p: "¿A quién sigue la garza de ganado para atrapar insectos?", ok: "Al ganado o a las podadoras", mal: ["A los peces del lago", "A otras garzas"], dato: "Atrapa los insectos que el ganado o las podadoras espantan." },
+  { id: "garrapatero", p: "¿Cómo anda el garrapatero?", ok: "En pequeñas bandadas, en matorrales y bordes de bosque", mal: ["Solo, en lo alto de las palmas", "En parejas sobre el agua"], dato: "Es todo negro, con la cola larga y el pico grueso y curvo." },
+  { id: "carpintero", p: "¿Dónde es común el carpintero habado?", ok: "En bosques abiertos y jardines", mal: ["En el agua de los lagos", "Solo en zonas de páramo"], dato: "El macho tiene el rojo hasta la corona." },
+  { id: "colibri", p: "¿Dónde prefiere estar el colibrí colirrufo?", ok: "En bordes de bosque, vegetación secundaria y jardines", mal: ["En cuevas oscuras", "En el fondo de los humedales"], dato: "Suele visitar comederos." },
+  { id: "siriri", p: "¿Dónde vive el sirirí común?", ok: "En zonas abiertas con árboles, parques y barrios", mal: ["Solo en el interior de la selva", "Solo sobre el agua"], dato: "Es un atrapamoscas grande; sus gorjeos agudos lo distinguen." },
+  { id: "mirla", p: "¿Dónde es común la mirla ollera?", ok: "En hábitats abiertos y arboledas", mal: ["En el interior de cavernas", "Sobre rocas de montaña"], dato: "Su canto es una serie de frases musicales." },
+  { id: "periquito", p: "¿A dónde van los periquitos bronceados?", ok: "A los árboles en flor o con frutos", mal: ["A dormir en los cables de luz", "Al pasto a buscar lombrices"], dato: "Van en parejas o en parvadas pequeñas, y vuelan muy rápido." }
+];
+// Qué comen: las opciones salen como alimentos en 3D (flores, frutas e insectos)
+const PREGUNTAS_DIETA = [
+  { id: "colibri", p: "¿De qué se alimenta el colibrí colirrufo?", ok: "flores", dato: "Los colibríes toman el néctar de las flores." },
+  { id: "pechirrojo", p: "¿Qué come el pechirrojo?", ok: "insectos", dato: "Se posa en cercas y postes para cazar insectos." },
+  { id: "azulejo", p: "¿Qué come el azulejo común?", ok: "frutas", dato: "Come frutas en la parte alta y media de los árboles." },
+  { id: "garza", p: "¿Qué atrapa la garza de ganado cuando sigue al ganado?", ok: "insectos", dato: "Atrapa los insectos que el ganado espanta al caminar." },
+  { id: "siriri", p: "¿Qué caza el sirirí, un atrapamoscas?", ok: "insectos", dato: "Atrapa insectos al vuelo." },
+  { id: "loro", p: "¿Qué come el loro cabeciazul?", ok: "frutas", dato: "Los loros se alimentan sobre todo de frutos y semillas." }
+];
+
+const barajar = a => a.slice().sort(() => Math.random() - 0.5);
+
+// Arma las 20 preguntas de una partida: ciclos de aves, entorno UAO, aves, ecología, entorno, aves; sin repetir y sin la misma ave dos veces seguidas
+function armarMazo() {
+  const piscinas = {
+    ave: barajar(E.flatMap(e => [0, 1, 2].map(sub => ({ tipo: "ave", grupo: "ave", esp: e, sub })))),
+    campus: barajar(PREGUNTAS_CAMPUS.map(x => ({ tipo: "tarjetas", grupo: "campus", ...x }))),
+    eco: barajar([...PREGUNTAS_HABITAT.map(x => ({ tipo: "tarjetas", grupo: "eco", ...x })), ...PREGUNTAS_DIETA.map(x => ({ tipo: "dieta", grupo: "eco", ...x }))])
+  };
+  const patron = ["ave", "campus", "eco", "ave", "campus", "ave"];
+  const mazo = [];
+  let ultima = null;
+  for (let i = 0; i < TOPE_QUIZ; i++) {
+    let lista = piscinas[patron[i % patron.length]];
+    if (!lista.length) lista = Object.values(piscinas).find(l => l.length);
+    if (!lista) break;
+    let j = lista.findIndex(q => (q.esp?.id ?? q.id ?? null) !== ultima || (q.esp?.id ?? q.id ?? null) === null);
+    if (j < 0) j = 0;
+    const q = lista.splice(j, 1)[0];
+    ultima = q.esp?.id ?? q.id ?? null;
+    mazo.push(q);
+  }
+  return mazo;
+}
+
 function iniciarQuiz() {
-  quiz = { ronda: 0, puntos: 0, total: 5, orden: E.slice().sort(() => Math.random() - 0.5).slice(0, 5), bloqueado: false };
+  quiz = { n: 0, aciertos: 0, vidas: VIDAS_QUIZ, mazo: armarMazo(), bloqueado: false, actual: null, texto: "" };
   rondaQuiz();
 }
+function encabezadoQuiz() {
+  const q = quiz;
+  const corazones = Array.from({ length: VIDAS_QUIZ }, (_, i) => `<svg class="ico vida${i >= q.vidas ? " perdida" : ""}"><use href="#i-corazon"/></svg>`).join("");
+  return `<small>Pregunta ${Math.min(q.n + 1, TOPE_QUIZ)}/${TOPE_QUIZ} - Aciertos ${q.aciertos} <span class="vidas" aria-label="Vidas: ${q.vidas}">${corazones}</span></small>`;
+}
+function pintarPregunta(dato = "", veredicto = null) {
+  const el = $("#ra-pregunta");
+  el.hidden = false;
+  el.innerHTML = encabezadoQuiz() + quiz.texto
+    + (veredicto === null ? "" : `<p class="ra-veredicto ${veredicto ? "ok" : "mal"}">${veredicto ? "¡Correcto!" : "Incorrecto"}</p>`)
+    + (dato ? `<p class="ra-dato">${dato}</p>` : "");
+  const oir = $("#ra-quiz-oir");
+  if (oir) oir.onclick = () => Sonido.cantar(quiz.actual.esp.canto, 1);
+}
+function limpiarOpciones() {
+  opcionesQuiz.forEach(o => { raiz.remove(o.g); o.g.traverse(m => { m.material?.map?.dispose(); m.material?.dispose?.(); }); });
+  opcionesQuiz = [];
+}
+function ponerOpcion(o, pos) {
+  o.g.position.copy(pos);
+  raiz.add(o.g);
+  opcionesQuiz.push(o);
+}
+function opcionTarjeta(texto, ok) {
+  const g = new THREE.Group();
+  const visual = tarjeta(texto);
+  g.add(visual);
+  return { g, zona: visual, visual, alto: 0.75, ok };
+}
+function opcionComida(tipo, ok) {
+  const g = new THREE.Group();
+  const item = crearComida(tipo);
+  item.scale.setScalar(1.05);
+  item.userData.bichos?.forEach((b, i) => b.position.set(Math.sin(i * 2) * 0.25, 0.5 + Math.sin(i * 3) * 0.15, Math.cos(i * 2) * 0.25));
+  g.add(item);
+  const zona = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+  zona.position.y = 0.3;
+  g.add(zona);
+  const rotulo = etiqueta(NOMBRE_COMIDA[tipo]);
+  rotulo.scale.multiplyScalar(0.45);
+  rotulo.position.set(0, 0.9, 0);
+  g.add(rotulo);
+  return { g, zona, visual: null, alto: 1.05, ok };
+}
+
 function rondaQuiz() {
   [...aves.values()].forEach(irse);
+  limpiarOpciones();
   const q = quiz;
-  if (q.ronda >= q.total) {
-    $("#ra-pregunta").innerHTML = `<b>${q.puntos}/${q.total}</b> ${q.puntos >= 4 ? "¡Eres un <strong>Guardián de las Aves UAO</strong>! <svg class=\"ico\"><use href=\"#i-medalla\"/></svg>" : "¡Buen intento! Repasa la guía y vuelve a jugar."}
-      <button id="ra-quiz-otra">Jugar otra vez</button>`;
-    $("#ra-quiz-otra").onclick = () => { limpiarAves(); iniciarQuiz(); };
-    lib()?.quiz(q.puntos);
-    if (q.puntos >= 4) { Sonido.exito(); confeti(direccion(rumbo(), 0.1, 2.5)); }
-    return;
-  }
-  const objetivo = q.orden[q.ronda];
-  const otras = E.filter(e => e !== objetivo).sort(() => Math.random() - 0.5).slice(0, 2);
-  const opciones = [objetivo, ...otras].sort(() => Math.random() - 0.5);
-  const tipo = q.ronda % 3;
-  let texto;
-  if (tipo === 0) texto = `¿Cuál es ${fem(objetivo) ? "la" : "el"} <strong>${objetivo.nombre}</strong>?`;
-  else if (tipo === 1) texto = `¿Quién es? <em>${objetivo.pistas[Math.floor(Math.random() * objetivo.pistas.length)]}</em>`;
-  else texto = `¿Quién canta así? <button id="ra-quiz-oir"><svg class="ico"><use href="#i-play"/></svg> Oír</button>`;
-  $("#ra-pregunta").hidden = false;
-  $("#ra-pregunta").innerHTML = `<small>Pregunta ${q.ronda + 1}/${q.total} - Puntos ${q.puntos}</small>${texto}`;
-  if (tipo === 2) {
-    despues(() => Sonido.cantar(objetivo.canto, 1), 1500);
-    $("#ra-quiz-oir").onclick = () => Sonido.cantar(objetivo.canto, 1);
-  }
-  q.objetivo = objetivo;
+  if (q.vidas <= 0 || q.n >= q.mazo.length) return finQuiz();
+  const preg = q.mazo[q.n];
+  q.actual = preg;
   q.bloqueado = false;
   const r0 = rumbo();
+  if (preg.tipo === "ave") {
+    const objetivo = preg.esp;
+    const otras = barajar(E.filter(e => e !== objetivo)).slice(0, 2);
+    const opciones = barajar([objetivo, ...otras]);
+    if (preg.sub === 0) q.texto = `¿Cuál es ${fem(objetivo) ? "la" : "el"} <strong>${objetivo.nombre}</strong>?`;
+    else if (preg.sub === 1) q.texto = `¿Quién es? <em>${objetivo.pistas[Math.floor(Math.random() * objetivo.pistas.length)]}</em>`;
+    else q.texto = `¿Quién canta así? <button id="ra-quiz-oir"><svg class="ico"><use href="#i-play"/></svg> Oír</button>`;
+    pintarPregunta();
+    if (preg.sub === 2) despues(() => Sonido.cantar(objetivo.canto, 1), 1500);
+    despues(() => {
+      opciones.forEach((e, i) => {
+        const az = r0 + (i - 1) * 0.55;
+        const suelo = e.soporte === "pasto" || e.soporte === "agua";
+        despues(() => llegarVolando(e.id, direccion(az, suelo ? -0.28 : 0.05, 3.3), a => { mirarCamara(a.obj, a.esp); a.quiz = true; }), i * 350);
+      });
+    }, 600);
+    return;
+  }
+  q.texto = preg.p;
+  pintarPregunta();
   despues(() => {
-    opciones.forEach((e, i) => {
-      const az = r0 + (i - 1) * 0.55;
-      const suelo = e.soporte === "pasto" || e.soporte === "agua";
-      despues(() => llegarVolando(e.id, direccion(az, suelo ? -0.28 : 0.05, 3.3), a => { mirarCamara(a.obj, a.esp); a.quiz = true; }), i * 350);
-    });
+    const opciones = preg.tipo === "dieta"
+      ? barajar(["flores", "frutas", "insectos"]).map(t => opcionComida(t, t === preg.ok))
+      : barajar([opcionTarjeta(preg.ok, true), ...preg.mal.map(t => opcionTarjeta(t, false))]);
+    // tarjetas: una sobre otra, así en un celular vertical se ven las tres sin girar; alimentos: en fila, juntos
+    opciones.forEach((o, i) => despues(() => {
+      const pos = preg.tipo === "dieta" ? direccion(r0 + (i - 1) * 0.17, -0.2, 4.2) : direccion(r0, 0, 3.3).add(new THREE.Vector3(0, (1 - i) * 0.86 - 0.2, 0));
+      ponerOpcion(o, pos);
+    }, i * 250));
   }, 600);
+}
+
+// Cierra una pregunta: cuenta el acierto o quita una vida, muestra el dato curioso (si lo hay) y pasa a la siguiente cuando da tiempo de leerlo
+function resolverPregunta(bien, dato = "") {
+  const q = quiz;
+  q.bloqueado = true;
+  if (bien) q.aciertos++; else q.vidas--;
+  q.n++;
+  pintarPregunta(dato, dato ? bien : null);   // en las preguntas de aves el veredicto va en la etiqueta del ave
+  despues(rondaQuiz, dato ? Math.min(7500, 2200 + dato.length * 45) : 2600);
+}
+function finQuiz() {
+  const q = quiz;
+  const guardian = q.aciertos >= ACIERTOS_GUARDIAN;
+  const motivo = q.vidas <= 0 ? "Se acabaron las vidas." : `¡Completaste las ${TOPE_QUIZ} preguntas!`;
+  $("#ra-pregunta").innerHTML = `<b>${q.aciertos}</b> aciertos. ${motivo} ${guardian ? "¡Eres un <strong>Guardián de las Aves UAO</strong>! <svg class=\"ico\"><use href=\"#i-medalla\"/></svg>" : `Consigue ${ACIERTOS_GUARDIAN} para ser Guardián.`}
+    <button id="ra-quiz-otra">Jugar otra vez</button>`;
+  $("#ra-quiz-otra").onclick = () => { limpiarAves(); iniciarQuiz(); };
+  lib()?.quiz(q.aciertos);
+  if (guardian) { Sonido.exito(); confeti(direccion(rumbo(), 0.1, 2.5)); }
 }
 function responderQuiz(a) {
   const q = quiz;
-  if (!q || q.bloqueado || !a.quiz) return;
+  if (!q || q.bloqueado || !a.quiz || q.actual?.tipo !== "ave") return;
   q.bloqueado = true;
-  if (a.esp === q.objetivo) {
-    q.puntos++;
+  const bien = a.esp === q.actual.esp;
+  if (bien) {
     celebrar(a.obj, reloj.elapsedTime);
     hacerCantar(a);
     confeti(a.obj.position.clone().add(new THREE.Vector3(0, 0.5, 0)));
@@ -522,11 +657,33 @@ function responderQuiz(a) {
   } else {
     Sonido.error();
     ponerEtiqueta(a, a.esp.nombre, "#E4673E");
-    const ok = [...aves.values()].find(x => x.esp === q.objetivo);
+    const ok = [...aves.values()].find(x => x.esp === q.actual.esp);
     if (ok) { ponerEtiqueta(ok, "Era:\n" + ok.esp.nombre, "#8EE68E"); celebrar(ok.obj, reloj.elapsedTime); }
   }
-  q.ronda++;
-  despues(rondaQuiz, 2600);
+  resolverPregunta(bien);
+}
+// Respuesta tocando una tarjeta o un alimento 3D
+function responderOpcion(o) {
+  const q = quiz;
+  if (!q || q.bloqueado || q.actual?.tipo === "ave") return;
+  const bien = !!o.ok;
+  const marcar = (op, ok) => {                   // la tarjeta se tiñe de verde o rojo; el alimento recibe una etiqueta
+    if (op.visual) { op.visual.material.color.set(ok ? "#C6F0C6" : "#F6C2B5"); return; }
+    const r = etiqueta(ok ? "¡Correcto!" : "Incorrecto", ok ? "#8EE68E" : "#E4673E");
+    r.position.set(0, op.alto + 0.1, 0);
+    op.g.add(r);
+  };
+  marcar(o, bien);
+  if (!bien) { const buena = opcionesQuiz.find(x => x.ok); if (buena) { marcar(buena, true); } }
+  if (bien) { confeti(o.g.position.clone().add(new THREE.Vector3(0, 0.6, 0))); Sonido.exito(); } else Sonido.error();
+  resolverPregunta(bien, q.actual.dato);
+}
+function tocarOpcionQuiz(x, y) {
+  if (!opcionesQuiz.length) return;
+  ray.setFromCamera(new THREE.Vector2((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1), camera);
+  const hit = ray.intersectObjects(opcionesQuiz.map(o => o.zona), false)[0];
+  const o = hit && opcionesQuiz.find(op => op.zona === hit.object);
+  if (o) responderOpcion(o);
 }
 
 // ------------------------------------------------------------------ entrada (toques y arrastre)
@@ -556,6 +713,7 @@ function configurarEntrada(el) {
     if (arrastre.movido > 12) return;
     const a = avePorPantalla(e.clientX, e.clientY);
     if (a) MODOS[modo].tocar?.(a);
+    else if (modo === "quiz") tocarOpcionQuiz(e.clientX, e.clientY);
   });
 }
 
@@ -850,7 +1008,23 @@ function tocarPrimera(filtro = () => true) {
 window.RA = {
   iniciar, salir, cambiarModo,
   _prueba: {
-    tocarPrimera, tocarCorrecta: () => tocarPrimera(a => quiz && a.esp === quiz.objetivo && a.quiz),
+    tocarPrimera,
+    // responde la pregunta actual del quiz, bien o mal (ave, tarjeta o alimento); devuelve el tipo de pregunta o null si aún no hay opciones
+    quizResponder: (bien = true) => {
+      const q = quiz;
+      if (!q || q.bloqueado || !q.actual) return null;
+      if (q.actual.tipo === "ave") {
+        const a = [...aves.values()].find(x => x.quiz && !x.vuelo && (x.esp === q.actual.esp) === bien);
+        if (!a) return null;
+        MODOS.quiz.tocar(a);
+        return "ave";
+      }
+      const o = opcionesQuiz.find(x => !!x.ok === bien);
+      if (!o || opcionesQuiz.length < 3) return null;
+      responderOpcion(o);
+      return q.actual.tipo;
+    },
+    tocarCorrecta: () => window.RA._prueba.quizResponder(true),
     mirarA: (i = 0, alto = 0.25, giro = 0) => { const a = [...aves.values()].filter(x => !x.vuelo)[i]; if (a) { arrastre.yaw = Math.atan2(a.obj.position.x, -a.obj.position.z) + giro; arrastre.pitch = -Math.asin((a.obj.position.y + alto) / a.obj.position.length()); } return a?.esp.id; },
     rendimiento: () => { renderer.render(scene, camera); return { llamadas: renderer.info.render.calls, triangulos: renderer.info.render.triangles }; },
     // soportes colocados (para comprobar que no pisan el camino, la fuente, bancas, etc.) y círculos que deben evitar
@@ -860,6 +1034,6 @@ window.RA = {
     etiquetas: () => { camera.updateMatrixWorld(); const d = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion), W = window.innerWidth;
       return [...aves.values()].filter(a => a.etiqueta).map(a => { const c = a.etiqueta.getWorldPosition(new THREE.Vector3()), e = a.etiqueta.getWorldScale(new THREE.Vector3()).x / 2, px = v => Math.round((v.project(camera).x * 0.5 + 0.5) * W);
         return { id: a.esp.id, izq: px(c.clone().addScaledVector(d, -e)), der: px(c.clone().addScaledVector(d, e)), ancho: W }; }); },
-    estado: () => ({ modo, fov: camera?.fov, aves: [...aves.values()].map(a => ({ id: a.esp.id, vuelo: !!a.vuelo, reg: a.registrada, etiq: !!a.etiqueta })), quiz: quiz && { ronda: quiz.ronda, puntos: quiz.puntos } })
+    estado: () => ({ modo, fov: camera?.fov, aves: [...aves.values()].map(a => ({ id: a.esp.id, vuelo: !!a.vuelo, reg: a.registrada, etiq: !!a.etiqueta })), quiz: quiz && { n: quiz.n, bloqueado: quiz.bloqueado, aciertos: quiz.aciertos, vidas: quiz.vidas, tipo: quiz.actual?.tipo, mazo: quiz.mazo.map(p => p.grupo), tipos: quiz.mazo.map(p => p.tipo), opciones: opcionesQuiz.length } })
   }
 };

@@ -106,10 +106,13 @@
       for (let i = 0; i < 9; i++) { const f = R(4200, 6200); tono(o, x, R(0.04, 0.08), f, f * R(0.75, 0.9), "sine", 0.16); x += R(0.07, 0.13); }
       return x - t;
     },
+    // mirla (zorzal): frases lentas de silbidos limpios que suben y bajan, con pausas entre frases; los zorzales no tienen vibrato
     mirla(o, t) {
       let x = t;
-      const notas = [1900, 2400, 2100, 2800, 2500, 2050, 2650];
-      for (const n of notas) { const d = R(0.14, 0.28); tono(o, x, d, n, n * R(0.9, 1.12), "sine", 0.2, { vib: 9, vibProf: 40, ataque: 0.03 }); x += d + 0.05; }
+      for (const frase of [[2300, 3100, 2600], [2700, 2200, 3000, 2500]]) {
+        for (const n of frase) { const d = R(0.14, 0.24); tono(o, x, d, n, n * R(0.88, 1.15), "sine", 0.2, { ataque: 0.02 }); x += d + 0.04; }
+        x += R(0.2, 0.32);
+      }
       return x - t;
     },
     pellar(o, t) {
@@ -130,10 +133,14 @@
       for (let i = 0; i < 7; i++) { tono(o, x, 0.035, 7200, 6100, "sine", 0.14); x += R(0.1, 0.2); }
       return x - t;
     },
+    // garza de ganado: graznido ronco y grave, en dos golpes («rrak-rrak»)
     garza(o, t) {
-      tono(o, t, 0.5, 290, 210, "sawtooth", 0.2, { am: 38, filtro: ["lowpass", 900, 1] });
-      ruido(o, t, 0.45, 500, 1, 0.12);
-      return 0.6;
+      for (let i = 0; i < 2; i++) {
+        const x = t + i * 0.34;
+        tono(o, x, 0.26, 480, 300, "sawtooth", 0.22, { am: 42, filtro: ["bandpass", 700, 0.9] });
+        ruido(o, x, 0.22, 900, 1.2, 0.14);
+      }
+      return 0.7;
     },
     periquito(o, t) {
       let x = t;
@@ -156,13 +163,13 @@
         tono(o, t + i * 0.3, 0.2, 1700 + i * 120, 2700 + i * 150, "sawtooth", 0.09, { filtro: ["bandpass", 2300, 2.2] });
       return 0.95;
     },
+    // garrapatero: su llamado típico es un silbido quejumbroso que sube («uuu-íik»), repetido
     garrapatero(o, t) {
       for (let k = 0; k < 2; k++) {
-        const x = t + k * 0.62;
-        tono(o, x, 0.18, 1650, 2300, "triangle", 0.2, { ataque: 0.02 });
-        tono(o, x + 0.24, 0.24, 2150, 1500, "triangle", 0.2, { ataque: 0.02 });
+        const x = t + k * 0.7;
+        tono(o, x, 0.42, 1000, 2700, "sine", 0.24, { ataque: 0.03, fMid: 1300, midAt: 0.5 });
       }
-      return 1.2;
+      return 1.4;
     }
   };
 

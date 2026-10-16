@@ -28,8 +28,8 @@
     const d = leer();
     $("#lib-aves").textContent = `${d.aves.length}/${E.length}`;
     $("#lib-fotos").textContent = d.fotos.length;
-    $("#lib-quiz").textContent = d.quiz == null ? "–" : `${d.quiz}/5`;
-    $("#lib-insignia").hidden = !(d.quiz >= 4);
+    $("#lib-quiz").textContent = d.quiz == null ? "–" : d.quiz;   // aciertos del mejor reto (hasta 20 preguntas con 2 vidas)
+    $("#lib-insignia").hidden = !(d.quiz >= 10);
     $("#lib-aves-grid").innerHTML = E.map(e => {
       const ok = d.aves.includes(e.id);
       return `<div class="lib-ave ${ok ? "ok" : ""}">
