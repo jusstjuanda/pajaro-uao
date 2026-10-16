@@ -172,8 +172,20 @@ function tronco() {
   return g;
 }
 
+// Soporte de la especie (rama, pasto, agua, flor o tronco), en las mismas unidades que el ave:
+// se coloca en el punto y con la orientación donde el ave se posa.
+export function crearSoporte(e) {
+  if (e.soporte === "rama") return rama();
+  if (e.soporte === "pasto") return pasto();
+  if (e.soporte === "agua") return agua();
+  if (e.soporte === "flor") { const f = flor(); f.position.set(0, 0.45, 1.05); return f; }
+  if (e.soporte === "tronco") return tronco();
+  return null;
+}
+
 // --------------------------------------------------------------- ave completa
-export function crearAve(e) {
+// conSoporte: la galería 3D la dibuja con su rama; la RA la pide sin soporte y lo coloca aparte en el mundo.
+export function crearAve(e, conSoporte = true) {
   const raiz = new THREE.Group();
   raiz.name = e.id;
   const ave = new THREE.Group();          // se anima (saltos, vuelo)
@@ -239,13 +251,7 @@ export function crearAve(e) {
     }
   }
 
-  // soporte (rama, pasto, agua, flor o tronco)
-  let soporte = null;
-  if (e.soporte === "rama") soporte = rama();
-  if (e.soporte === "pasto") soporte = pasto();
-  if (e.soporte === "agua") soporte = agua();
-  if (e.soporte === "flor") { soporte = flor(); soporte.position.set(0, 0.45, 1.05); }
-  if (e.soporte === "tronco") soporte = tronco();
+  const soporte = conSoporte ? crearSoporte(e) : null;
   if (soporte) raiz.add(soporte);
 
   // zona invisible para tocar / apuntar

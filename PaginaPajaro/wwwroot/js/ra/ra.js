@@ -1,7 +1,7 @@
 // Motor de Realidad Aumentada de «Pájaro»: cámara + giroscopio (Android/iOS), modo simulado,
 // 6 interacciones RA (avistar, binoculares, llamar, comedero, foto, quiz) y colocación WebXR (Android).
 import * as THREE from "three";
-import { crearAve, animarAve, cantar, aletear, celebrar, etiqueta, notaMusical } from "./aves3d.js";
+import { crearAve, crearSoporte, animarAve, cantar, aletear, celebrar, etiqueta, notaMusical } from "./aves3d.js";
 
 const E = window.ESPECIES_RA;
 const porId = Object.fromEntries(E.map(e => [e.id, e]));
@@ -16,6 +16,7 @@ let modo = "avistar";
 const aves = new Map();              // uid -> {obj, esp, registrada, vuelo, etiqueta}
 let uid = 0;
 const particulas = [];
+const soportesSaliendo = [];         // soportes que se quedaron sin ave: se encogen y se quitan
 const qGiro = new THREE.Quaternion();
 let arrastre = { yaw: 0, pitch: 0, activo: false, x: 0, y: 0, movido: 0 };
 let fovObjetivo = FOV;
@@ -190,25 +191,53 @@ function plantarArboles(g, hoja, madera) {
 }
 
 // ------------------------------------------------------------------ aves
+// sinSoporte: el ave llega volando y su soporte se pone en el punto de aterrizaje (ver volar)
 function agregarAve(id, pos, opciones = {}) {
+  const { sinSoporte, ...datos } = opciones;
   const esp = porId[id];
-  const obj = crearAve(esp);
+  const obj = crearAve(esp, false);     // el soporte no va dentro del ave: es un objeto aparte del mundo
   obj.position.copy(pos);
   mirarCamara(obj, esp);
   raiz.add(obj);
-  const a = { uid: ++uid, obj, esp, registrada: lib()?.tiene(id) || false, vuelo: null, etiqueta: null, ...opciones };
+  const a = { uid: ++uid, obj, esp, registrada: lib()?.tiene(id) || false, vuelo: null, etiqueta: null, soporte: null, ...datos };
   aves.set(a.uid, a);
+  if (!sinSoporte) ponerSoporte(a, obj);
   if (a.registrada && opciones.conEtiqueta !== false) ponerEtiqueta(a);
   return a;
 }
 function quitarAve(a) {
+  quitarSoporte(a, false);
   raiz.remove(a.obj);
   aves.delete(a.uid);
 }
 function limpiarAves() {
   [...aves.values()].forEach(quitarAve);
+  soportesSaliendo.splice(0).forEach(s => raiz.remove(s.g));
   objetos.forEach(o => raiz.remove(o));
   objetos = [];
+}
+// Soporte (rama, pasto, charco…): objeto del mundo, no parte del ave. Se queda quieto donde el ave se posa
+// y desaparece cuando ella se va, así no viaja con el ave ni se acumulan soportes.
+// pose: objeto con la posición y la orientación con que queda posada el ave.
+function ponerSoporte(a, pose, aparecer = false) {
+  const s = crearSoporte(a.esp);
+  if (!s) return;
+  const base = new THREE.Group();
+  base.name = "soporte-" + a.esp.id;
+  base.position.copy(pose.position);
+  base.quaternion.copy(pose.quaternion);
+  base.userData.escala = a.obj.scale.x;
+  base.scale.setScalar(aparecer ? 0 : base.userData.escala);
+  base.add(s);
+  raiz.add(base);
+  a.soporte = base;
+}
+function quitarSoporte(a, animar = true) {
+  const s = a.soporte;
+  if (!s) return;
+  a.soporte = null;
+  if (animar) soportesSaliendo.push({ g: s, t0: reloj.elapsedTime, desde: s.scale.x });
+  else raiz.remove(s);
 }
 function ponerEtiqueta(a, texto, color) {
   if (a.etiqueta) a.obj.remove(a.etiqueta);
@@ -219,21 +248,29 @@ function ponerEtiqueta(a, texto, color) {
   a.etiqueta = s;
 }
 // vuelo desde lejos hasta un punto (curva con aleteo)
-function volar(a, destino, dur = 2.4, alLlegar) {
+// El soporte de donde despega se queda y se desvanece; el del destino ya está esperando y crece al acercarse el ave.
+function volar(a, destino, dur = 2.4, alLlegar, conSoporte = true) {
   const desde = a.obj.position.clone();
   const medio = desde.clone().lerp(destino, 0.5).add(new THREE.Vector3(0, 1.6, 0));
   a.vuelo = { desde, medio, destino: destino.clone(), t0: reloj.elapsedTime, dur, alLlegar };
+  quitarSoporte(a);
+  if (conSoporte) {
+    const pose = new THREE.Object3D();   // el ave tal como quedará posada: en el destino y mirando a la cámara
+    pose.position.copy(destino);
+    mirarCamara(pose, a.esp);
+    ponerSoporte(a, pose, true);
+  }
   Sonido.aleteo(Math.sin(rumbo()) * 0.5);
 }
 function llegarVolando(id, destino, alLlegar) {
   const az = rumbo() + (Math.random() < 0.5 ? -1 : 1) * (0.7 + Math.random() * 0.5);
-  const a = agregarAve(id, direccion(az, 0.45, 9));
+  const a = agregarAve(id, direccion(az, 0.45, 9), { sinSoporte: true });
   volar(a, destino, 2.4, alLlegar);
   return a;
 }
 function irse(a) {
   const lejos = a.obj.position.clone().setY(a.obj.position.y + 6).multiplyScalar(2.5);
-  volar(a, lejos, 1.6, () => quitarAve(a));
+  volar(a, lejos, 1.6, () => quitarAve(a), false);
 }
 function notas(a) {
   for (let i = 0; i < 4; i++) {
@@ -609,10 +646,16 @@ function ciclo() {
       a.obj.position.copy(p);
       if (dir.lengthSq() > 1e-6) a.obj.lookAt(p.clone().add(dir));
       a.obj.userData.aletearHasta = t + 0.2;
-      if (a.obj.userData.soporte) a.obj.userData.soporte.visible = k > 0.85;
+      if (a.soporte) a.soporte.scale.setScalar(a.soporte.userData.escala * THREE.MathUtils.smoothstep(k, 0.6, 1));   // el soporte del destino crece al acercarse el ave
       if (k >= 1) { a.vuelo = null; mirarCamara(a.obj, a.esp); v.alLlegar?.(a); }
     }
     animarAve(a.obj, t, dt);
+  }
+  // soportes sin ave: se encogen y se quitan
+  for (let i = soportesSaliendo.length - 1; i >= 0; i--) {
+    const s = soportesSaliendo[i], k = Math.min(1, (t - s.t0) / 0.4);
+    s.g.scale.setScalar(s.desde * (1 - k));
+    if (k >= 1) { raiz.remove(s.g); soportesSaliendo.splice(i, 1); }
   }
   // utilería con insectos
   for (const o of objetos) (o.userData.bichos || []).forEach((b, i) => b.position.set(Math.sin(t * 3 + i) * 0.25, 0.5 + Math.sin(t * 5 + i * 2) * 0.15, Math.cos(t * 4 + i) * 0.25));
@@ -748,10 +791,11 @@ async function iniciarXR() {
   $("#xr-salir").onclick = () => sesion.end();
   sesion.addEventListener("select", () => {
     if (!reticula.visible) return;
-    const a = agregarAve(actual.id, new THREE.Vector3().setFromMatrixPosition(reticula.matrix));
+    const a = agregarAve(actual.id, new THREE.Vector3().setFromMatrixPosition(reticula.matrix), { sinSoporte: true });
     a.obj.scale.setScalar(actual.escala * 0.45);
     const cam = renderer.xr.getCamera();
     a.obj.lookAt(cam.position.x, a.obj.position.y, cam.position.z);
+    ponerSoporte(a, a.obj);   // el soporte se pone ya con el tamaño y la orientación finales del ave
     hacerCantar(a);
   });
   sesion.addEventListener("end", () => {
