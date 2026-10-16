@@ -2,6 +2,7 @@
 // 6 interacciones RA (avistar, binoculares, llamar, comedero, foto, quiz) y colocación WebXR (Android).
 import * as THREE from "three";
 import { crearAve, crearSoporte, animarAve, cantar, aletear, celebrar, etiqueta, notaMusical } from "./aves3d.js";
+import { crearSimulado, radioDe, OBSTACULOS } from "./campus.js";
 
 const E = window.ESPECIES_RA;
 const porId = Object.fromEntries(E.map(e => [e.id, e]));
@@ -53,148 +54,7 @@ function aviso(texto, ms = 2600, abajo = false) {
 const lib = () => window.Libreta;
 const fem = e => e.genero === "f";   // concordancia de los avisos: «la Garza de ganado», «registrada»
 
-// ------------------------------------------------------------------ escena simulada (sin cámara)
-const semilla = n => { let s = n; return () => (s = (s * 16807) % 2147483647) / 2147483647; };   // azar repetible
-const EDIFICIOS = [[-24, -30, 26, 9, 10, 0.3], [26, -26, 22, 11, 9, -0.4], [32, 14, 10, 7, 18, -1.2], [-30, 10, 12, 8, 16, 1.1]];   // x, z, ancho, alto, fondo, giro
-
-function crearSimulado() {
-  const g = new THREE.Group();
-  const cielo = new THREE.SphereGeometry(120, 24, 12);
-  const col = [];
-  const pos = cielo.attributes.position;
-  const arriba = new THREE.Color("#4F9BD6"), horizonte = new THREE.Color("#F7E0B0");
-  for (let i = 0; i < pos.count; i++) {
-    const k = THREE.MathUtils.clamp(pos.getY(i) / 120, 0, 1);
-    const c = horizonte.clone().lerp(arriba, Math.pow(k, 0.6));
-    col.push(c.r, c.g, c.b);
-  }
-  cielo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
-  g.add(new THREE.Mesh(cielo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false })));
-  const suelo = new THREE.Mesh(new THREE.CircleGeometry(110, 48), new THREE.MeshStandardMaterial({ color: "#6E9F45", roughness: 1 }));
-  suelo.rotation.x = -Math.PI / 2;
-  suelo.position.y = -1.6;
-  g.add(suelo);
-  const camino = new THREE.Mesh(new THREE.PlaneGeometry(3, 60), new THREE.MeshStandardMaterial({ color: "#B9A57E", roughness: 1 }));
-  camino.rotation.x = -Math.PI / 2; camino.position.set(0, -1.59, -20);
-  g.add(camino);
-  const ladrillo = new THREE.MeshStandardMaterial({ color: "#B4553A", flatShading: true });
-  const ventana = new THREE.MeshStandardMaterial({ color: "#2E3A44", flatShading: true });
-  for (const [x, z, w, h, d, ry] of EDIFICIOS) {
-    const b = new THREE.Group();
-    b.add(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), ladrillo));
-    for (let i = 0; i < Math.floor(w / 2.6); i++)
-      for (let j = 0; j < Math.floor(h / 3); j++) {
-        const v = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 0.1), ventana);
-        v.position.set(-w / 2 + 1.6 + i * 2.6, -h / 2 + 2 + j * 3, d / 2 + 0.05);
-        b.add(v);
-      }
-    b.position.set(x, -1.6 + h / 2, z);
-    b.rotation.y = ry;
-    g.add(b);
-  }
-  const hoja = [new THREE.MeshStandardMaterial({ color: "#3F7A36", flatShading: true }), new THREE.MeshStandardMaterial({ color: "#4F8F3E", flatShading: true })];
-  const madera = new THREE.MeshStandardMaterial({ color: "#6A4A2E", flatShading: true });
-  plantarArboles(g, hoja, madera);
-  return g;
-}
-
-// Palmera: tronco que se afina y corona de hojas planas que salen hacia afuera y se doblan hacia abajo.
-function crearPalmera(rnd, hoja, madera) {
-  const g = new THREE.Group();
-  const alto = 7 + rnd() * 2;
-  const tronco = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.3, alto, 6), madera);
-  tronco.position.y = alto / 2;
-  g.add(tronco);
-  const nudo = new THREE.Mesh(new THREE.IcosahedronGeometry(0.38, 0), hoja[0]);   // tapa el extremo del tronco
-  nudo.position.y = alto + 0.1;
-  g.add(nudo);
-  const tramo1 = new THREE.ConeGeometry(0.32, 2, 4).translate(0, 1, 0);           // la base queda en el origen, la punta arriba
-  const tramo2 = new THREE.ConeGeometry(0.24, 1.8, 4).translate(0, 0.9, 0);
-  const hojas = 9;
-  for (let k = 0; k < hojas; k++) {
-    const giro = new THREE.Group();                                               // reparte las hojas alrededor del tronco
-    giro.position.y = alto;
-    giro.rotation.y = k / hojas * Math.PI * 2 + rnd() * 0.3;
-    const a = new THREE.Group();                                                  // inclina el primer tramo hacia afuera
-    a.rotation.x = k % 2 ? 1.15 : 0.8;
-    const m1 = new THREE.Mesh(tramo1, hoja[k % 2]);
-    m1.scale.set(2, 1, 0.25);
-    const b = new THREE.Group();                                                  // el segundo tramo cuelga desde la punta del primero
-    b.position.y = 2;
-    b.rotation.x = 0.8;
-    const m2 = new THREE.Mesh(tramo2, hoja[k % 2]);
-    m2.scale.set(2, 1, 0.25);
-    b.add(m2);
-    a.add(m1, b);
-    giro.add(a);
-    g.add(giro);
-  }
-  return g;
-}
-
-// Árbol de copa redonda: tronco y cuatro bloques de hojas.
-function crearArbol(rnd, hoja, madera) {
-  const g = new THREE.Group();
-  const tronco = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.45, 4, 6), madera);
-  tronco.position.y = 2;
-  g.add(tronco);
-  for (let k = 0; k < 4; k++) {
-    const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1.8 + rnd(), 0), hoja[k % 2]);
-    c.position.set((rnd() - 0.5) * 2.4, 4.5 + rnd() * 1.5, (rnd() - 0.5) * 2.4);
-    g.add(c);
-  }
-  return g;
-}
-
-// Distancia horizontal del tronco al punto más lejano del árbol (mide los vértices reales, así no hay que adivinar).
-function radioDe(arbol) {
-  const v = new THREE.Vector3();
-  let r = 0;
-  arbol.updateMatrixWorld(true);
-  arbol.traverse(o => {
-    if (!o.isMesh) return;
-    const p = o.geometry.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld);
-      r = Math.max(r, Math.hypot(v.x, v.z));
-    }
-  });
-  return r;
-}
-
-// Distancia del punto (x, z) al rectángulo de un edificio (0 si está dentro).
-function distanciaAlEdificio(x, z, [bx, bz, w, , d, ry]) {
-  const dx = x - bx, dz = z - bz;
-  const lx = dx * Math.cos(ry) - dz * Math.sin(ry), lz = dx * Math.sin(ry) + dz * Math.cos(ry);
-  return Math.hypot(Math.max(Math.abs(lx) - w / 2, 0), Math.max(Math.abs(lz) - d / 2, 0));
-}
-
-// Reparte los árboles con una semilla fija (el campus se ve igual cada vez). Cada árbol se coloca solo si
-// no pisa a otro árbol, a un edificio, al camino ni a la zona de enfrente donde llegan volando las aves.
-function plantarArboles(g, hoja, madera) {
-  const rnd = semilla(20231);
-  const puestos = [];
-  for (let i = 0; i < 34; i++) {
-    const arbol = i % 4 === 0 ? crearPalmera(rnd, hoja, madera) : crearArbol(rnd, hoja, madera);
-    const escala = 0.85 + rnd() * 0.4;
-    const radio = radioDe(arbol) * escala;
-    for (let intento = 0; intento < 150; intento++) {
-      const a = i / 34 * Math.PI * 2 + (rnd() - 0.5) * (0.4 + intento * 0.04);                // un sector por árbol: quedan repartidos en círculo
-      const d = Math.sqrt(14 * 14 + rnd() * (40 * 40 - 14 * 14));                             // entre 14 y 40 m
-      const x = Math.sin(a) * d, z = -Math.cos(a) * d;
-      if (d - radio < 10) continue;                                                           // el centro queda libre
-      if (Math.abs(x) < 3 && z < 12 && z > -52) continue;                                     // el camino queda libre
-      if (EDIFICIOS.some(e => distanciaAlEdificio(x, z, e) < radio + 0.8)) continue;
-      if (puestos.some(p => Math.hypot(p.x - x, p.z - z) < p.radio + radio + 0.3)) continue;
-      arbol.position.set(x, -1.6, z);
-      arbol.rotation.y = rnd() * Math.PI * 2;
-      arbol.scale.setScalar(escala);
-      g.add(arbol);
-      puestos.push({ x, z, radio });
-      break;
-    }
-  }
-}
+// (el campus simulado, sin cámara, está en campus.js)
 
 // ------------------------------------------------------------------ aves
 // sinSoporte: el ave llega volando y su soporte se pone en el punto de aterrizaje (ver volar)
@@ -272,6 +132,7 @@ const enElSuelo = esp => esp.soporte === "pasto" || esp.soporte === "agua";
 
 function cabe(p, r, suelo, propia) {
   if (suelo && simulado?.visible && Math.abs(p.x) < SENDERO.semiancho + r && p.z > SENDERO.z0 - r && p.z < SENDERO.z1 + r) return false;
+  if (simulado?.visible && OBSTACULOS.some(o => Math.hypot(p.x - o.x, p.z - o.z) < r + o.r)) return false;   // ni la fuente, ni bancas, canteros, setos o farolas del campus
   const choca = (q, rq) => Math.abs(p.y - q.y) < 0.8 && Math.hypot(p.x - q.x, p.z - q.z) < r + rq + 0.15;
   for (const a of aves.values()) if (a !== propia && a.soporte && choca(a.soporte.position, radioSoporte(a.esp))) return false;
   return !objetos.some(o => choca(o.position, o.userData.radio ?? 0.5));
@@ -796,6 +657,7 @@ function ciclo() {
     s.g.scale.setScalar(s.desde * (1 - k));
     if (k >= 1) { raiz.remove(s.g); soportesSaliendo.splice(i, 1); }
   }
+  if (simulado?.visible) simulado.userData.animar?.(t);   // fuente, nubes y mariposas del campus
   // utilería con insectos
   for (const o of objetos) (o.userData.bichos || []).forEach((b, i) => b.position.set(Math.sin(t * 3 + i) * 0.25, 0.5 + Math.sin(t * 5 + i * 2) * 0.15, Math.cos(t * 4 + i) * 0.25));
   // partículas
@@ -977,6 +839,10 @@ window.RA = {
   _prueba: {
     tocarPrimera, tocarCorrecta: () => tocarPrimera(a => quiz && a.esp === quiz.objetivo && a.quiz),
     mirarA: (i = 0, alto = 0.25, giro = 0) => { const a = [...aves.values()].filter(x => !x.vuelo)[i]; if (a) { arrastre.yaw = Math.atan2(a.obj.position.x, -a.obj.position.z) + giro; arrastre.pitch = -Math.asin((a.obj.position.y + alto) / a.obj.position.length()); } return a?.esp.id; },
+    rendimiento: () => { renderer.render(scene, camera); return { llamadas: renderer.info.render.calls, triangulos: renderer.info.render.triangles }; },
+    // soportes colocados (para comprobar que no pisan el camino, la fuente, bancas, etc.) y círculos que deben evitar
+    soportes: () => [...aves.values()].filter(a => a.soporte).map(a => ({ id: a.esp.id, x: a.soporte.position.x, z: a.soporte.position.z, y: a.soporte.position.y, r: radioSoporte(a.esp), suelo: enElSuelo(a.esp) })),
+    obstaculos: () => OBSTACULOS.map(o => ({ ...o })),
     // dónde quedan (en píxeles) los bordes izquierdo y derecho de cada etiqueta de ave
     etiquetas: () => { camera.updateMatrixWorld(); const d = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion), W = window.innerWidth;
       return [...aves.values()].filter(a => a.etiqueta).map(a => { const c = a.etiqueta.getWorldPosition(new THREE.Vector3()), e = a.etiqueta.getWorldScale(new THREE.Vector3()).x / 2, px = v => Math.round((v.project(camera).x * 0.5 + 0.5) * W);

@@ -1,19 +1,22 @@
-// Aves 3D low-poly generadas por código (three.js) con animaciones.
+// Aves 3D generadas por código (three.js), con plumas, escamas del pecho, ojos con aro, fosas nasales y dedos; con animaciones.
 // Ejes locales: el ave mira hacia +Z, arriba es +Y. El origen es el punto donde se posa.
 import * as THREE from "three";
+import { fusionar } from "./fusion.js";
 
 const geoCache = {};
 function geo(key, make) { return geoCache[key] || (geoCache[key] = make()); }
 const matCache = {};
 function mat(color, extra = {}) {
   const key = color + JSON.stringify(extra);
-  if (!matCache[key]) matCache[key] = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.75, metalness: 0.0, ...extra });
+  if (!matCache[key]) matCache[key] = new THREE.MeshStandardMaterial({ color, flatShading: false, roughness: 0.6, metalness: 0.0, ...extra });
   return matCache[key];
 }
-const esfera = () => geo("esfera", () => new THREE.SphereGeometry(0.5, 12, 9));
+// tono más claro (k > 1) o más oscuro (k < 1) de un color
+const tono = (c, k) => "#" + new THREE.Color(c).multiplyScalar(k).getHexString();
+const esfera = () => geo("esfera", () => new THREE.SphereGeometry(0.5, 22, 16));
 const icosa = () => geo("icosa", () => new THREE.IcosahedronGeometry(0.5, 1));
-const cil = () => geo("cil", () => new THREE.CylinderGeometry(0.5, 0.5, 1, 8));
-const cono = () => geo("cono", () => new THREE.ConeGeometry(0.5, 1, 7));
+const cil = () => geo("cil", () => new THREE.CylinderGeometry(0.5, 0.5, 1, 10));
+const cono = () => geo("cono", () => new THREE.ConeGeometry(0.5, 1, 10));
 const caja = () => geo("caja", () => new THREE.BoxGeometry(1, 1, 1));
 
 function pieza(geometria, material, pos, escala, rot) {
@@ -62,6 +65,8 @@ function pico(tipo, color) {
     const c2 = pieza(cono(), m, [0, -alto * 0.32, largo * 0.42], [ancho * 0.8, largo * 0.85, alto * 0.5], [Math.PI / 2, 0, 0]);
     inf.add(c2);
   }
+  if (tipo !== "gancho") for (const s of [-1, 1]) sup.add(pieza(esfera(), mat("#17120f"), [s * ancho * 0.2, alto * 0.22, largo * 0.2], [0.028, 0.02, 0.05]));   // fosas nasales
+  fusionar(sup, { profundo: false, plano: false, rugosidad: 0.6 }); fusionar(inf, { profundo: false, plano: false, rugosidad: 0.6 });
   g.add(sup, inf);
   g.userData.inferior = inf;
   return g;
@@ -81,8 +86,9 @@ function cabeza(e, radio = 0.34) {
   }
   if (e.extras.cara) h.add(pieza(esfera(), mat(e.extras.cara), [0, 0, radio * 0.55], [radio * 1.6, radio * 1.3, radio * 0.9]));
   for (const s of [-1, 1]) {
-    h.add(pieza(esfera(), mat(e.colores.ojo || "#111111", { roughness: 0.2 }), [s * radio * 0.78, radio * 0.12, radio * 0.42], [radio * 0.3, radio * 0.3, radio * 0.3]));
-    h.add(pieza(esfera(), mat("#ffffff", { emissive: "#ffffff", emissiveIntensity: 0.6 }), [s * radio * 0.86, radio * 0.2, radio * 0.52], [radio * 0.09, radio * 0.09, radio * 0.09]));
+    h.add(pieza(esfera(), mat(e.colores.ojoAro || "#d8cfb8", { roughness: 0.5 }), [s * radio * 0.76, radio * 0.12, radio * 0.4], [radio * 0.46, radio * 0.46, radio * 0.3]));   // aro claro del ojo
+    h.add(pieza(esfera(), mat(e.colores.ojo || "#0d0b0a", { roughness: 0.12, metalness: 0.2 }), [s * radio * 0.82, radio * 0.12, radio * 0.45], [radio * 0.32, radio * 0.32, radio * 0.28]));
+    h.add(pieza(esfera(), mat("#ffffff", { emissive: "#ffffff", emissiveIntensity: 0.8 }), [s * radio * 0.92, radio * 0.21, radio * 0.56], [radio * 0.1, radio * 0.1, radio * 0.08]));
   }
   if (e.extras.copete) {
     const cp = pieza(cono(), mat(e.extras.copete), [0, radio * 0.9, -radio * 0.5], [radio * 0.25, radio * 1.4, radio * 0.25], [-1.1, 0, 0]);
@@ -92,6 +98,7 @@ function cabeza(e, radio = 0.34) {
   p.position.set(0, -radio * 0.05, radio * 0.86);
   h.add(p);
   h.userData.pico = p;
+  fusionar(h, { profundo: false, plano: false, rugosidad: 0.6 });
   return h;
 }
 
@@ -102,14 +109,16 @@ function cola(e) {
   const f = e.extras.colaForma || "normal";
   if (f === "horquilla") {
     for (const s of [-1, 1]) c.add(pieza(caja(), m, [s * 0.09, 0, -0.42], [0.13, 0.04, 0.85], [0, s * 0.18, 0]));
-  } else if (f === "larga") {
-    c.add(pieza(caja(), m, [0, 0, -0.65], [0.3, 0.05, 1.3]));
-  } else if (f === "corta") {
-    c.add(pieza(caja(), m, [0, 0, -0.2], [0.34, 0.05, 0.45]));
   } else {
-    c.add(pieza(caja(), m, [0, 0, -0.36], [0.34, 0.05, 0.75]));
+    // abanico de plumas (en vez de una sola lámina)
+    const [largo, ancho, n] = f === "larga" ? [1.3, 0.34, 7] : f === "corta" ? [0.45, 0.34, 5] : [0.75, 0.36, 7];
+    for (let i = 0; i < n; i++) {
+      const t = i - (n - 1) / 2;
+      c.add(pieza(esfera(), mat(tono(e.colores.cola, 1 - Math.abs(t) * 0.045)), [t * ancho / n * 0.95, -Math.abs(t) * 0.004, -largo / 2 + Math.abs(t) * 0.025], [ancho / n * 1.7, 0.035, largo * (1 - Math.abs(t) * 0.025)], [0, t * 0.07, 0]));
+    }
   }
   if (e.extras.bajoCola) c.add(pieza(caja(), mat(e.extras.bajoCola), [0, -0.04, -0.15], [0.28, 0.04, 0.35]));
+  fusionar(c, { profundo: false, plano: false, rugosidad: 0.6 });
   return c;
 }
 
@@ -119,8 +128,12 @@ function ala(e, lado) {
   forma.add(pieza(esfera(), mat(e.colores.ala), [0, 0, -0.3], [0.1, 0.62, 1.05]));
   forma.add(pieza(esfera(), mat(e.extras.puntaAla || e.colores.cola), [0, -0.05, -0.75], [0.08, 0.36, 0.55]));
   if (e.extras.hombro) forma.add(pieza(esfera(), mat(e.extras.hombro), [0.01, 0.12, 0.05], [0.11, 0.36, 0.42]));
+  // plumas: coberteras (hileras superpuestas) y primarias en abanico hacia atrás
+  for (let r = 0; r < 3; r++) forma.add(pieza(esfera(), mat(tono(e.colores.ala, 0.92 + r * 0.06)), [0.045, 0.2 - r * 0.15, -0.12 - r * 0.28], [0.07, 0.3 - r * 0.03, 0.4], [0, 0, 0]));
+  for (let i = 0; i < 5; i++) forma.add(pieza(esfera(), mat(tono(e.extras.puntaAla || e.colores.cola, 0.8 + i * 0.05)), [0.02, -0.2 + i * 0.1, -0.98 + Math.abs(i - 2) * 0.07], [0.04, 0.1, 0.62 - Math.abs(i - 2) * 0.07], [(i - 2) * 0.06, 0, 0]));
   pivote.add(forma);
   pivote.userData.lado = lado;
+  fusionar(forma, { profundo: false, plano: false, rugosidad: 0.6 });
   return pivote;
 }
 
@@ -132,6 +145,7 @@ function rama() {
   g.add(pieza(cil(), madera, [0.75, 0.2, 0.05], [0.07, 0.8, 0.07], [0, 0, -0.9]));
   for (const [x, y, z, s] of [[-1.3, 0.05, 0, 0.6], [1.15, 0.5, 0.1, 0.55], [-0.95, 0.25, 0.25, 0.4], [1.35, 0.1, -0.2, 0.45]])
     g.add(pieza(icosa(), mat(["#4f8a3a", "#5f9c45", "#3f7533"][Math.floor(Math.abs(x * 7)) % 3]), [x, y, z], [s, s * 0.8, s]));
+  fusionar(g);
   return g;
 }
 function pasto() {
@@ -141,6 +155,7 @@ function pasto() {
     const a = i * 2.4, r = 0.3 + (i % 5) * 0.22;
     g.add(pieza(cono(), mat(i % 2 ? "#6fa64a" : "#4e8233"), [Math.cos(a) * r, 0.1, Math.sin(a) * r], [0.07, 0.3 + (i % 3) * 0.1, 0.07]));
   }
+  fusionar(g);
   return g;
 }
 function agua() {
@@ -150,6 +165,7 @@ function agua() {
   const onda = (radio, nombre) => pieza(geo(nombre, () => new THREE.TorusGeometry(radio, 0.02, 4, 28)), mat("#d6eef5"), [0, 0.0, 0], null, [Math.PI / 2, 0, 0]);
   g.add(onda(0.9, "anillo"), onda(1.7, "anillo-grande"));
   for (const [x, z] of [[-2, 0.9], [2.05, -0.9], [-1.2, -1.9], [1.4, 1.8], [0.2, -2.25]]) g.add(pieza(cil(), mat("#5e8f3c"), [x, 0.3, z], [0.05, 0.7, 0.05]));
+  fusionar(g);
   return g;
 }
 function flor() {
@@ -163,6 +179,7 @@ function flor() {
   }
   g.add(pieza(esfera(), mat("#f2c230"), [0, 0.2, 0], [0.1, 0.1, 0.1]));
   for (const s of [-1, 1]) g.add(pieza(esfera(), mat("#4e8f3c"), [s * 0.35, -1.1, 0], [0.5, 0.08, 0.25], [0, 0, s * 0.5]));
+  fusionar(g);
   return g;
 }
 function tronco() {
@@ -171,6 +188,7 @@ function tronco() {
   for (let i = 0; i < 5; i++) g.add(pieza(caja(), mat("#4f3622"), [Math.sin(i) * 0.1, -0.5 + i * 0.45, 0.35], [0.03, 0.3, 0.03]));
   g.add(pieza(cil(), mat("#6a4a30"), [0.35, 1.2, 0.52], [0.12, 0.8, 0.12], [0, 0, -0.9]));
   g.add(pieza(icosa(), mat("#4f8a3a"), [0.75, 1.5, 0.52], [0.5, 0.4, 0.5]));
+  fusionar(g);
   return g;
 }
 
@@ -211,6 +229,19 @@ export function crearAve(e, conSoporte = true) {
   cuerpo.add(pieza(esfera(), espalda, [0, 0, 0], escalaCuerpo));
   cuerpo.add(pieza(esfera(), mat(c.vientre), [0, -0.1, 0.1], escalaCuerpo.map((v, i) => v * [0.9, 0.85, 0.85][i])));
   if (e.extras.pecho) cuerpo.add(pieza(esfera(), mat(e.extras.pecho), [0, 0.02, 0.38], [0.72, 0.62, 0.38]));
+  // plumaje del pecho: hileras de escamitas (plumas) sobre el vientre
+  {
+    const rx = escalaCuerpo[0] * 0.9 * 0.5, ry = escalaCuerpo[1] * 0.85 * 0.5, rz = escalaCuerpo[2] * 0.85 * 0.5;
+    const base = e.extras.pecho || c.vientre, cero = new THREE.Vector3(0, 0, 1);
+    for (let fila = 0; fila < 4; fila++) for (let k = -2; k <= 2; k++) {
+      const lon = k * 0.42 + (fila % 2) * 0.21, lat = 0.15 + fila * 0.26;
+      const n = new THREE.Vector3(Math.cos(lat) * Math.sin(lon) / rx, -Math.sin(lat) / ry, Math.cos(lat) * Math.cos(lon) / rz).normalize();
+      const p = new THREE.Vector3(rx * Math.cos(lat) * Math.sin(lon), -0.1 - ry * Math.sin(lat), 0.1 + rz * Math.cos(lat) * Math.cos(lon));
+      const esc = pieza(esfera(), mat(tono(base, (fila + k) % 2 ? 1.07 : 0.94)), p.toArray(), [0.16, 0.1, 0.05]);
+      esc.quaternion.setFromUnitVectors(cero, n);
+      cuerpo.add(esc);
+    }
+  }
 
   // cuello largo de la garza
   const cabezaPivote = new THREE.Group();
@@ -249,10 +280,13 @@ export function crearAve(e, conSoporte = true) {
     for (const s of [-1, 1]) {
       const pata = pieza(cil(), mat(c.patas || "#3b302a"), [s * 0.14, largoPata / 2, tipo === "carpintero" ? 0.12 : 0.05], [0.05, largoPata, 0.05]);
       ave.add(pata);
-      ave.add(pieza(caja(), mat(c.patas || "#3b302a"), [s * 0.14, 0.01, 0.12], [0.05, 0.03, 0.25]));
+      for (const t of [-1, 0, 1]) ave.add(pieza(cil(), mat(c.patas || "#3b302a"), [s * 0.14 + t * 0.05, 0.02, 0.13], [0.028, 0.24, 0.028], [Math.PI / 2, 0, t * 0.4]));   // dedos
+      ave.add(pieza(cil(), mat(c.patas || "#3b302a"), [s * 0.14, 0.02, -0.04], [0.028, 0.1, 0.028], [Math.PI / 2, 0, 0]));                                          // dedo de atrás
     }
   }
 
+  fusionar(cuerpo, { profundo: false, plano: false, rugosidad: 0.6 });   // menos objetos por cuadro: las piezas quietas de cada parte se unen en una sola malla
+  fusionar(ave, { profundo: false, plano: false, rugosidad: 0.6 });         // patas y dedos
   const soporte = conSoporte ? crearSoporte(e) : null;
   if (soporte) raiz.add(soporte);
 
