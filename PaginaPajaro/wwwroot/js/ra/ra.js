@@ -139,7 +139,7 @@ function cabe(p, r, suelo, propia) {
 }
 function sitioLibre(pos, r, suelo, propia) {
   const d0 = Math.hypot(pos.x, pos.z), az = Math.atan2(pos.x, -pos.z);
-  for (let k = 0; k < 4; k++) {                                // si a esa distancia no cabe en ningún punto del círculo, prueba un poco más lejos
+  for (let k = 0; k < 7; k++) {                                // si a esa distancia no cabe en ningún punto del círculo, prueba un poco más lejos
     for (let i = 0; i < 40; i++) {
       const giro = (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.1;   // 0, +0,1, -0,1, +0,2 … radianes: primero lo más cerca del punto pedido
       const p = new THREE.Vector3(Math.sin(az + giro) * (d0 + k * 0.6), pos.y, -Math.cos(az + giro) * (d0 + k * 0.6));
@@ -256,33 +256,38 @@ function hacerCantar(a, conSonido = true) {
   notas(a);
 }
 
+// Registra el ave en la libreta la primera vez que se toca, en cualquier modo menos el quiz (ahí el nombre sería la respuesta).
+function registrarAve(a) {
+  if (a.registrada) return;
+  a.registrada = true;
+  ponerEtiqueta(a);
+  lib()?.registrar(a.esp.id);
+  Sonido.registro();
+  const total = lib()?.total() || 0;
+  aviso(`<strong>¡${a.esp.nombre} registrad${fem(a.esp) ? "a" : "o"}!</strong> Libreta: ${total}/${E.length}`);
+}
+
 // ------------------------------------------------------------------ modos
 const MODOS = {
   avistar: {
     titulo: "Avistar", ayuda: "Mueve el celular y busca aves a tu alrededor. Toca un ave para registrarla en tu libreta.",
     entrar() {
       limpiarAves();
-      const sinVer = E.filter(e => !lib()?.tiene(e.id));
-      const lista = (sinVer.length >= 6 ? sinVer : E).slice().sort(() => Math.random() - 0.5).slice(0, 6);
+      // las 12 aves a la vez, repartidas en dos anillos alrededor (cerca y un poco más lejos) y sin pisarse; primero se acomodan las de soporte más grande
+      const lista = E.slice().sort(() => Math.random() - 0.5);
       const r0 = rumbo();
-      lista.forEach((e, i) => {
-        const az = r0 + 0.35 + i * (Math.PI * 2 / 6) + (Math.random() - 0.5) * 0.3;
-        const suelo = enElSuelo(e);
-        const el = suelo ? -0.32 : -0.05 + Math.random() * 0.32;
-        agregarAve(e.id, sitioLibre(direccion(az, el, suelo ? 3.4 : 3.6), radioSoporte(e), suelo, null));
+      lista.map((e, i) => ({ e, i })).sort((a, b) => radioSoporte(b.e) - radioSoporte(a.e)).forEach(({ e, i }) => {
+        const az = r0 + 0.2 + i * (Math.PI * 2 / lista.length) + (Math.random() - 0.5) * 0.18;
+        const suelo = enElSuelo(e), lejos = i % 2 === 1;
+        const d = (suelo ? 3.4 : 3.6) + (lejos ? 2 : 0);
+        const el = suelo ? Math.asin(-1.07 / d) : -0.05 + Math.random() * 0.32;
+        agregarAve(e.id, sitioLibre(direccion(az, el, d), radioSoporte(e), suelo, null));
       });
     },
     tocar(a) {
       hacerCantar(a);
       aletear(a.obj, reloj.elapsedTime, 0.5);
-      if (!a.registrada) {
-        a.registrada = true;
-        ponerEtiqueta(a);
-        lib()?.registrar(a.esp.id);
-        Sonido.registro();
-        const total = lib()?.total() || 0;
-        aviso(`<strong>¡${a.esp.nombre} registrad${fem(a.esp) ? "a" : "o"}!</strong> Libreta: ${total}/${E.length}`);
-      }
+      registrarAve(a);
       window.FichaRA?.(a.esp);
     }
   },
@@ -290,25 +295,25 @@ const MODOS = {
     titulo: "Binoculares", ayuda: "Apunta al centro de un ave para ver de cerca sus marcas de identificación.",
     entrar() { if (!aves.size) MODOS.avistar.entrar(); fovObjetivo = FOV_ZOOM; document.body.classList.add("ra-zoom"); },
     salir() { fovObjetivo = FOV; document.body.classList.remove("ra-zoom"); $("#ra-marcas").innerHTML = ""; },
-    tocar(a) { hacerCantar(a); }
+    tocar(a) { hacerCantar(a); registrarAve(a); }
   },
   llamar: {
     titulo: "Llamar", ayuda: "Elige un canto: el ave que lo reconoce vendrá volando y te responderá.",
     entrar() { abrirPanel("llamar"); },
     salir() { cerrarPanel(); },
-    tocar(a) { hacerCantar(a); }
+    tocar(a) { hacerCantar(a); registrarAve(a); }
   },
   comedero: {
     titulo: "Comedero", ayuda: "Pon alimento frente a ti y descubre qué aves llegan a comer.",
     entrar() { limpiarAves(); abrirPanel("comedero"); },
     salir() { cerrarPanel(); },
-    tocar(a) { hacerCantar(a); window.FichaRA?.(a.esp); }
+    tocar(a) { hacerCantar(a); registrarAve(a); window.FichaRA?.(a.esp); }
   },
   foto: {
     titulo: "Foto", ayuda: "Encuadra un ave y toma tu foto de campo.",
     entrar() { if (!aves.size) MODOS.avistar.entrar(); $("#ra-obturador").hidden = false; },
     salir() { $("#ra-obturador").hidden = true; },
-    tocar(a) { hacerCantar(a); }
+    tocar(a) { hacerCantar(a); registrarAve(a); }
   },
   quiz: {
     titulo: "Quiz RA", ayuda: "Lee la pregunta y toca el ave correcta entre las que aparecen.",
@@ -437,14 +442,22 @@ function tomarFoto() {
   }
   renderer.render(scene, camera);
   g.drawImage(renderer.domElement, 0, 0);
+  // franja de abajo: el tamaño de la letra sale del ancho (en una foto vertical de celular la altura la hacía enorme);
+  // si el título y la fecha no caben en una línea, la fecha pasa a una segunda línea
+  const titulo = "Aves UAO - Aves del campus", fecha = new Date().toLocaleDateString("es-CO");
+  const margen = w * 0.04, px = Math.round(Math.min(h * 0.028, w * 0.045));
+  g.font = `700 ${px}px Inter, sans-serif`;
+  const unaLinea = g.measureText(titulo).width + g.measureText(fecha).width + margen * 3 <= w;
+  const barra = Math.round(px * (unaLinea ? 2.6 : 4.2));
   g.fillStyle = "rgba(14,38,33,.75)";
-  g.fillRect(0, h - h * 0.07, w, h * 0.07);
+  g.fillRect(0, h - barra, w, barra);
+  g.textAlign = "left";
+  g.textBaseline = "middle";
   g.fillStyle = "#F2A541";
-  g.font = `700 ${Math.round(h * 0.028)}px Inter, sans-serif`;
-  g.fillText("Aves UAO - Aves del campus", w * 0.04, h - h * 0.025);
+  g.fillText(titulo, margen, unaLinea ? h - barra / 2 : h - barra * 0.7);
   g.fillStyle = "#fff";
-  g.textAlign = "right";
-  g.fillText(new Date().toLocaleDateString("es-CO"), w * 0.96, h - h * 0.025);
+  if (unaLinea) { g.textAlign = "right"; g.fillText(fecha, w - margen, h - barra / 2); }
+  else g.fillText(fecha, margen, h - barra * 0.28);
   const url = cv.toDataURL("image/jpeg", 0.82);
   Sonido.obturador();
   const fl = $("#ra-flash");
