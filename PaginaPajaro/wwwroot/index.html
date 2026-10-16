@@ -35,7 +35,7 @@
   <!-- ======================= PORTADA ======================= -->
   <header class="hero" id="inicio">
     <canvas id="cielo" aria-hidden="true"></canvas>
-    <img class="arco-palmas" src="img/deco/arco-palmas.svg" width="1000" height="570" alt="">
+    <img class="arco-palmas" src="img/deco/arco-palmas.svg" width="1000" height="560" alt="">
     <div class="hero-contenido">
       <p class="kicker">Universidad Autónoma de Occidente, Cali</p>
       <h1>Aves <img src="img/logo-uao.png" width="711" height="342" alt="UAO"></h1>
@@ -62,7 +62,8 @@
 
   <main>
     <!-- ======================= CÓMO FUNCIONA ======================= -->
-    <section id="como" class="seccion con-hojas">
+    <div class="hojas">   <!-- un solo fondo de hojas continuo para «Cómo funciona», la guía y la libreta -->
+    <section id="como" class="seccion">
       <div class="contenedor">
         <p class="etiqueta revelar">Realidad Aumentada</p>
         <h2 class="revelar">Las aves del campus UAO</h2>
@@ -84,7 +85,7 @@
     </section>
 
     <!-- ======================= GUÍA ======================= -->
-    <section id="guia" class="seccion seccion-clara con-hojas">
+    <section id="guia" class="seccion">
       <div class="contenedor">
         <p class="etiqueta revelar">Base de datos de aves UAO</p>
         <h2 class="revelar">Guía de las aves del campus</h2>
@@ -106,7 +107,7 @@
     </section>
 
     <!-- ======================= LIBRETA ======================= -->
-    <section id="libreta" class="seccion con-hojas">
+    <section id="libreta" class="seccion">
       <div class="contenedor">
         <p class="etiqueta revelar">Tu progreso</p>
         <h2 class="revelar">Mi libreta de campo</h2>
@@ -122,6 +123,7 @@
         <button id="lib-borrar" class="btn-sec">Reiniciar libreta</button>
       </div>
     </section>
+    </div>
 
     <!-- ======================= JORNADAS ======================= -->
     <section id="jornadas" class="seccion seccion-oscura">

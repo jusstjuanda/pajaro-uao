@@ -68,9 +68,11 @@ button { font: inherit; cursor: pointer; }
 .intro { font-size: 1.08rem; color: var(--suave); max-width: 64ch; margin: 18px 0 38px; }
 .seccion-oscura .intro { color: #B9CBC2; }
 /* hojas de la guía UAO como fondo, apenas visibles (el patrón se repite sin cortes, también al espejo) */
-.con-hojas { position: relative; isolation: isolate; }
-.con-hojas::before { content: ""; position: absolute; inset: 0; z-index: -1; background: url(../img/deco/hojas.webp) center top / 432px auto repeat; opacity: .08; pointer-events: none; }
-@media (max-width: 600px) { .con-hojas::before { background-size: 300px auto; } }
+/* las tres secciones claras comparten un solo fondo, del mismo color y con el dibujo continuo: sin cortes entre una y otra, como en las páginas de la guía */
+.hojas { position: relative; isolation: isolate; }
+.hojas::before { content: ""; position: absolute; inset: 0; z-index: -1; background: url(../img/deco/hojas.webp) center top / 432px auto repeat; opacity: .08; pointer-events: none; }
+.hojas .seccion-clara { background: transparent; }
+@media (max-width: 600px) { .hojas::before { background-size: 300px auto; } }
 .revelar { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
 .revelar.visible { opacity: 1; transform: none; }
 

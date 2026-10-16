@@ -88,11 +88,9 @@
       c.pts.forEach((y, i) => g.lineTo(-20 + off + (i / 120) * (W + 40), y));
       g.lineTo(W + 20, H); g.closePath(); g.fill();
     }
-    // siluetas: edificios del campus y árboles
+    // siluetas de árboles (los rectángulos de «edificios» se quitaron: asomaban entre las copas y parecían un árbol cortado en recto)
     const sil = mezcla("#0B1712", "#23402F", p);
     g.fillStyle = sil;
-    const bx = W * 0.42 + (raton.px - 0.5) * 40, by = H * 0.86;
-    [[0, 0.1, 0.07], [0.08, 0.06, 0.1], [0.19, 0.12, 0.06], [0.33, 0.07, 0.08]].forEach(([dx, w, h]) => g.fillRect(bx + dx * W * 0.5, by - h * H, w * W * 0.5, h * H + 20));
     for (const a of arboles) {
       const x = a.x * W + (raton.px - 0.5) * 50, base = H + 4;
       if (a.tipo === "palma") {
