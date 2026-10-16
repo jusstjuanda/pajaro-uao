@@ -20,7 +20,7 @@ window.ESPECIES_RA = [
     pistas: ["Ave gris azulosa que come frutas en lo alto de los árboles", "Se posa en los cables de teléfono", "Común en pueblos, jardines y campos con árboles grandes"]
   },
   {
-    id: "mirla", nombre: "Mirla ollera", cientifico: "Turdus ignobilis", canto: "mirla", comida: ["pasto", "frutas"],
+    id: "mirla", nombre: "Mirla ollera", genero: "f", cientifico: "Turdus ignobilis", canto: "mirla", comida: ["pasto", "frutas"],
     tipo: "posado", soporte: "pasto", escala: 0.42, pico: "fino",
     colores: { espalda: "#77684F", vientre: "#C2B497", cabeza: "#77684F", ala: "#6C5D45", cola: "#655640", pico: "#2A2622", patas: "#4a3f35" },
     extras: { garganta: "#D8CDB6" },
@@ -52,7 +52,7 @@ window.ESPECIES_RA = [
     pistas: ["Se alimenta de néctar y visita los comederos", "Verde con la cola canela", "Prefiere jardines y bordes de bosque"]
   },
   {
-    id: "garza", nombre: "Garza de ganado", cientifico: "Bubulcus ibis", canto: "garza", comida: ["agua", "pasto", "insectos"],
+    id: "garza", nombre: "Garza de ganado", genero: "f", cientifico: "Bubulcus ibis", canto: "garza", comida: ["agua", "pasto", "insectos"],
     tipo: "garza", soporte: "agua", escala: 0.4, pico: "daga",
     colores: { espalda: "#F8F8F4", vientre: "#EDEFEF", cabeza: "#F8F8F4", ala: "#F1F2EF", cola: "#E8EAE8", pico: "#F2C230", patas: "#2A2A2A", ojo: "#E8B830" },
     extras: {},

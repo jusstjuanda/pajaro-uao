@@ -1,4 +1,4 @@
-// Motor de Realidad Aumentada de «Pájaro»: cámara + giroscopio (Android/iOS), modo simulado,
+// Motor de Realidad Aumentada de «Aves UAO»: cámara + giroscopio (Android/iOS), modo simulado,
 // 6 interacciones RA (avistar, binoculares, llamar, comedero, foto, quiz) y colocación WebXR (Android).
 import * as THREE from "three";
 import { crearAve, crearSoporte, animarAve, cantar, aletear, celebrar, etiqueta, notaMusical } from "./aves3d.js";
@@ -17,6 +17,9 @@ const aves = new Map();              // uid -> {obj, esp, registrada, vuelo, eti
 let uid = 0;
 const particulas = [];
 const soportesSaliendo = [];         // soportes que se quedaron sin ave: se encogen y se quitan
+const pendientes = new Set();        // llegadas con retraso (ver despues): se cancelan al cambiar de modo o limpiar la escena
+const llamadas = new Map();          // especie -> llegada en espera de un canto (tocar el mismo canto otra vez la reinicia)
+const MAX_AVES = 6;                  // aves a la vez en «Llamar»: si llega una nueva y ya hay 6, la más antigua se va
 const qGiro = new THREE.Quaternion();
 let arrastre = { yaw: 0, pitch: 0, activo: false, x: 0, y: 0, movido: 0 };
 let fovObjetivo = FOV;
@@ -38,14 +41,17 @@ function mirarCamara(obj, esp) {
   obj.lookAt(0, obj.position.y, 0);
   if (esp && esp.tipo === "carpintero") obj.rotateY(Math.PI / 2);
 }
-function aviso(texto, ms = 2600) {
+// abajo: el aviso sale sobre la barra de modos en vez de arriba (en el quiz arriba está la pregunta)
+function aviso(texto, ms = 2600, abajo = false) {
   const t = $("#ra-aviso");
   t.innerHTML = texto;
+  t.classList.toggle("abajo", abajo);
   t.classList.add("ver");
   clearTimeout(aviso.tm);
   aviso.tm = setTimeout(() => t.classList.remove("ver"), ms);
 }
 const lib = () => window.Libreta;
+const fem = e => e.genero === "f";   // concordancia de los avisos: «la Garza de ganado», «registrada»
 
 // ------------------------------------------------------------------ escena simulada (sin cámara)
 const semilla = n => { let s = n; return () => (s = (s * 16807) % 2147483647) / 2147483647; };   // azar repetible
@@ -210,7 +216,21 @@ function quitarAve(a) {
   raiz.remove(a.obj);
   aves.delete(a.uid);
 }
+// Ejecuta algo más tarde y lo anota. Si el usuario cambia de modo o la escena se limpia antes de que llegue la hora,
+// se cancela: así no aparecen aves de más ni se repiten las que ya se pidieron.
+function despues(fn, ms) {
+  const t = setTimeout(() => { pendientes.delete(t); fn(); }, ms);
+  pendientes.add(t);
+  return t;
+}
+function cancelar(t) { clearTimeout(t); pendientes.delete(t); }
+function cancelarPendientes() {
+  pendientes.forEach(clearTimeout);
+  pendientes.clear();
+  llamadas.clear();
+}
 function limpiarAves() {
+  cancelarPendientes();
   [...aves.values()].forEach(quitarAve);
   soportesSaliendo.splice(0).forEach(s => raiz.remove(s.g));
   objetos.forEach(o => raiz.remove(o));
@@ -239,6 +259,49 @@ function quitarSoporte(a, animar = true) {
   if (animar) soportesSaliendo.push({ g: s, t0: reloj.elapsedTime, desde: s.scale.x });
   else raiz.remove(s);
 }
+
+// ---------------- que nada se cruce
+// Cada soporte ocupa un círculo en el suelo (el radio se mide de su forma real, a la escala del ave). Antes de posar un ave
+// se busca un punto, girando alrededor del usuario a la misma distancia, donde ese círculo no pise: el sendero del campus
+// simulado (solo el pasto y el charco, que van en el suelo), otros soportes ni la comida del comedero.
+const SENDERO = { semiancho: 1.5, z0: -50, z1: 10 };
+const RADIO_COMIDA = { flores: 0.35, frutas: 0.45, agua: 0.5, pasto: 0.6, insectos: 0.25 };
+const radios = {};
+const radioSoporte = esp => radios[esp.id] ?? (radios[esp.id] = Math.max(0.35, radioDe(crearSoporte(esp)) * esp.escala));
+const enElSuelo = esp => esp.soporte === "pasto" || esp.soporte === "agua";
+
+function cabe(p, r, suelo, propia) {
+  if (suelo && simulado?.visible && Math.abs(p.x) < SENDERO.semiancho + r && p.z > SENDERO.z0 - r && p.z < SENDERO.z1 + r) return false;
+  const choca = (q, rq) => Math.abs(p.y - q.y) < 0.8 && Math.hypot(p.x - q.x, p.z - q.z) < r + rq + 0.15;
+  for (const a of aves.values()) if (a !== propia && a.soporte && choca(a.soporte.position, radioSoporte(a.esp))) return false;
+  return !objetos.some(o => choca(o.position, o.userData.radio ?? 0.5));
+}
+function sitioLibre(pos, r, suelo, propia) {
+  const d0 = Math.hypot(pos.x, pos.z), az = Math.atan2(pos.x, -pos.z);
+  for (let k = 0; k < 4; k++) {                                // si a esa distancia no cabe en ningún punto del círculo, prueba un poco más lejos
+    for (let i = 0; i < 40; i++) {
+      const giro = (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.1;   // 0, +0,1, -0,1, +0,2 … radianes: primero lo más cerca del punto pedido
+      const p = new THREE.Vector3(Math.sin(az + giro) * (d0 + k * 0.6), pos.y, -Math.cos(az + giro) * (d0 + k * 0.6));
+      if (cabe(p, r, suelo, propia)) return p;
+    }
+  }
+  return pos;
+}
+// Dónde poner la comida para que quepan ella y las dos aves que llegan a sus lados (una a cada lado, sin tocarla), sin pisar el sendero.
+function sitioComedero(az, rComida, aves2) {
+  const lado = (e, k) => (k ? 1 : -1) * (rComida + radioSoporte(e) + 0.2);
+  const poner = (a, d) => {
+    const centro = direccion(a, -0.38, d);
+    return { centro, sitios: aves2.map((e, k) => centro.clone().add(new THREE.Vector3(Math.cos(a) * lado(e, k), enElSuelo(e) ? 0 : 0.35, Math.sin(a) * lado(e, k)))) };
+  };
+  for (let j = 0; j < 4; j++) {
+    for (let i = 0; i < 40; i++) {
+      const g = poner(az + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.1, 2.4 + j * 0.6);
+      if (cabe(g.centro, rComida, true, null) && aves2.every((e, k) => cabe(g.sitios[k], radioSoporte(e), enElSuelo(e), null))) return g;
+    }
+  }
+  return poner(az, 2.4);
+}
 function ponerEtiqueta(a, texto, color) {
   if (a.etiqueta) a.obj.remove(a.etiqueta);
   const s = etiqueta(texto || a.esp.nombre, color);
@@ -250,10 +313,11 @@ function ponerEtiqueta(a, texto, color) {
 // vuelo desde lejos hasta un punto (curva con aleteo)
 // El soporte de donde despega se queda y se desvanece; el del destino ya está esperando y crece al acercarse el ave.
 function volar(a, destino, dur = 2.4, alLlegar, conSoporte = true) {
+  quitarSoporte(a);
+  if (conSoporte) destino = sitioLibre(destino, radioSoporte(a.esp), enElSuelo(a.esp), a);   // un punto donde el soporte no pise nada
   const desde = a.obj.position.clone();
   const medio = desde.clone().lerp(destino, 0.5).add(new THREE.Vector3(0, 1.6, 0));
   a.vuelo = { desde, medio, destino: destino.clone(), t0: reloj.elapsedTime, dur, alLlegar };
-  quitarSoporte(a);
   if (conSoporte) {
     const pose = new THREE.Object3D();   // el ave tal como quedará posada: en el destino y mirando a la cámara
     pose.position.copy(destino);
@@ -269,6 +333,7 @@ function llegarVolando(id, destino, alLlegar) {
   return a;
 }
 function irse(a) {
+  a.saliendo = true;
   const lejos = a.obj.position.clone().setY(a.obj.position.y + 6).multiplyScalar(2.5);
   volar(a, lejos, 1.6, () => quitarAve(a), false);
 }
@@ -303,14 +368,14 @@ const MODOS = {
     titulo: "Avistar", ayuda: "Mueve el celular y busca aves a tu alrededor. Toca un ave para registrarla en tu libreta.",
     entrar() {
       limpiarAves();
-      const pendientes = E.filter(e => !lib()?.tiene(e.id));
-      const lista = (pendientes.length >= 6 ? pendientes : E).slice().sort(() => Math.random() - 0.5).slice(0, 6);
+      const sinVer = E.filter(e => !lib()?.tiene(e.id));
+      const lista = (sinVer.length >= 6 ? sinVer : E).slice().sort(() => Math.random() - 0.5).slice(0, 6);
       const r0 = rumbo();
       lista.forEach((e, i) => {
         const az = r0 + 0.35 + i * (Math.PI * 2 / 6) + (Math.random() - 0.5) * 0.3;
-        const suelo = e.soporte === "pasto" || e.soporte === "agua";
+        const suelo = enElSuelo(e);
         const el = suelo ? -0.32 : -0.05 + Math.random() * 0.32;
-        agregarAve(e.id, direccion(az, el, suelo ? 3.4 : 3.6));
+        agregarAve(e.id, sitioLibre(direccion(az, el, suelo ? 3.4 : 3.6), radioSoporte(e), suelo, null));
       });
     },
     tocar(a) {
@@ -322,7 +387,7 @@ const MODOS = {
         lib()?.registrar(a.esp.id);
         Sonido.registro();
         const total = lib()?.total() || 0;
-        aviso(`<strong>¡${a.esp.nombre} registrado!</strong> Libreta: ${total}/${E.length}`);
+        aviso(`<strong>¡${a.esp.nombre} registrad${fem(a.esp) ? "a" : "o"}!</strong> Libreta: ${total}/${E.length}`);
       }
       window.FichaRA?.(a.esp);
     }
@@ -362,10 +427,13 @@ const MODOS = {
 export function cambiarModo(m) {
   if (!MODOS[m]) return;
   MODOS[modo]?.salir?.();
+  cancelarPendientes();
   modo = m;
+  $("#ra-ficha").hidden = true;                                  // la ficha de un ave no se queda tapando la foto, el quiz o el comedero
+  document.body.classList.toggle("ra-en-quiz", m === "quiz");    // en el quiz se esconde el botón de tamaño real: taparía la pregunta
   document.querySelectorAll(".ra-modo").forEach(b => b.classList.toggle("activo", b.dataset.modo === m));
   $("#ra-titulo").textContent = MODOS[m].titulo;
-  aviso(MODOS[m].ayuda, 3800);
+  aviso(MODOS[m].ayuda, 3800, m === "quiz");
   MODOS[m].entrar();
   Sonido.clic();
 }
@@ -384,16 +452,24 @@ function abrirPanel(cual) {
 }
 function cerrarPanel() { $("#ra-panel").hidden = true; }
 
+// Deja espacio para un ave nueva: si ya hay MAX_AVES, la más antigua (la primera de la lista) se va volando.
+function hacerLugar() {
+  const activas = [...aves.values()].filter(a => !a.saliendo);
+  activas.slice(0, Math.max(0, activas.length - MAX_AVES + 1)).forEach(irse);
+}
+
 function llamar(id) {
   Sonido.cantar(porId[id].canto, 0.9);
-  aviso(`Reproduciendo el canto del <strong>${porId[id].nombre}</strong>…`);
-  const existente = [...aves.values()].find(a => a.esp.id === id);
+  aviso(`Reproduciendo el canto de${fem(porId[id]) ? " la" : "l"} <strong>${porId[id].nombre}</strong>…`);
   const destino = direccion(rumbo() + (Math.random() - 0.5) * 0.4, porId[id].soporte === "pasto" || porId[id].soporte === "agua" ? -0.3 : 0.02, 3);
-  setTimeout(() => {
-    const llega = a => { mirarCamara(a.obj, a.esp); hacerCantar(a); aviso(`<strong>¡El ${a.esp.nombre} respondió!</strong> Tócalo para registrarlo.`); };
+  cancelar(llamadas.get(id));          // si se toca el mismo canto otra vez antes de que llegue el ave, solo cuenta la última vez
+  llamadas.set(id, despues(() => {
+    llamadas.delete(id);
+    const llega = a => { mirarCamara(a.obj, a.esp); hacerCantar(a); aviso(`<strong>¡${fem(a.esp) ? "La" : "El"} ${a.esp.nombre} respondió!</strong> Tóca${fem(a.esp) ? "la" : "lo"} para registrar${fem(a.esp) ? "la" : "lo"}.`); };
+    const existente = [...aves.values()].find(a => a.esp.id === id && !a.saliendo);   // se busca al llegar la hora, no al tocar
     if (existente) volar(existente, destino, 2, () => llega(existente));
-    else llegarVolando(id, destino, a => llega(a));
-  }, 1100);
+    else { hacerLugar(); llegarVolando(id, destino, a => llega(a)); }
+  }, 1100));
 }
 
 function crearComida(tipo) {
@@ -436,22 +512,21 @@ function crearComida(tipo) {
 function comedero(tipo) {
   limpiarAves();
   cerrarPanel();   // deja ver el comedero; para cambiar la comida se toca otra vez «Comedero»
-  const az = rumbo();
-  const pos = direccion(az, -0.38, 2.4);
+  const candidatas = E.filter(e => e.comida.includes(tipo)).sort(() => Math.random() - 0.5).slice(0, 2);
+  const { centro: pos, sitios } = sitioComedero(rumbo(), RADIO_COMIDA[tipo], candidatas);
   const item = crearComida(tipo);
+  item.name = "comida-" + tipo;
+  item.userData.radio = RADIO_COMIDA[tipo];
   item.position.copy(pos);
   raiz.add(item);
   objetos.push(item);
   Sonido.clic();
-  const candidatas = E.filter(e => e.comida.includes(tipo)).sort(() => Math.random() - 0.5).slice(0, 2);
   candidatas.forEach((e, i) => {
-    const lado = i === 0 ? -1 : 1;
-    const destino = pos.clone().add(new THREE.Vector3(Math.cos(az) * lado * 0.9, e.soporte === "pasto" || e.soporte === "agua" ? 0 : 0.35, Math.sin(az) * lado * 0.9));
-    setTimeout(() => llegarVolando(e.id, destino, a => { mirarCamara(a.obj, a.esp); hacerCantar(a); }), 900 + i * 1300);
+    despues(() => llegarVolando(e.id, sitios[i], a => { mirarCamara(a.obj, a.esp); hacerCantar(a); }), 900 + i * 1300);
   });
   const nombres = candidatas.map(e => e.nombre).join(" y ");
   const textos = { flores: "Las flores ofrecen néctar", frutas: "Las frutas atraen a las aves frugívoras", agua: "El agua atrae a las aves de humedal", pasto: "En el pasto buscan lombrices e insectos", insectos: "Los insectos atraen a los atrapamoscas" };
-  setTimeout(() => aviso(`${textos[tipo]}: llegan <strong>${nombres}</strong>.`, 4200), 1200);
+  despues(() => aviso(`${textos[tipo]}: llegan <strong>${nombres}</strong>.`, 4200), 1200);
 }
 
 // ---------------- foto
@@ -472,7 +547,7 @@ function tomarFoto() {
   g.fillRect(0, h - h * 0.07, w, h * 0.07);
   g.fillStyle = "#F2A541";
   g.font = `700 ${Math.round(h * 0.028)}px Inter, sans-serif`;
-  g.fillText("Pájaro - Aves del campus UAO", w * 0.04, h - h * 0.025);
+  g.fillText("Aves UAO - Aves del campus", w * 0.04, h - h * 0.025);
   g.fillStyle = "#fff";
   g.textAlign = "right";
   g.fillText(new Date().toLocaleDateString("es-CO"), w * 0.96, h - h * 0.025);
@@ -482,7 +557,7 @@ function tomarFoto() {
   fl.classList.remove("ver"); void fl.offsetWidth; fl.classList.add("ver");
   lib()?.foto(url);
   [...aves.values()].forEach(a => aletear(a.obj, reloj.elapsedTime, 0.4));
-  aviso(`<strong>¡Foto guardada en tu libreta!</strong> <a href="${url}" download="pajaro-uao.jpg">Descargar</a>`, 4500);
+  aviso(`<strong>¡Foto guardada en tu libreta!</strong> <a href="${url}" download="aves-uao.jpg">Descargar</a>`, 4500);
 }
 
 // ---------------- quiz
@@ -506,23 +581,23 @@ function rondaQuiz() {
   const opciones = [objetivo, ...otras].sort(() => Math.random() - 0.5);
   const tipo = q.ronda % 3;
   let texto;
-  if (tipo === 0) texto = `¿Cuál es el <strong>${objetivo.nombre}</strong>?`;
+  if (tipo === 0) texto = `¿Cuál es ${fem(objetivo) ? "la" : "el"} <strong>${objetivo.nombre}</strong>?`;
   else if (tipo === 1) texto = `¿Quién es? <em>${objetivo.pistas[Math.floor(Math.random() * objetivo.pistas.length)]}</em>`;
   else texto = `¿Quién canta así? <button id="ra-quiz-oir"><svg class="ico"><use href="#i-play"/></svg> Oír</button>`;
   $("#ra-pregunta").hidden = false;
   $("#ra-pregunta").innerHTML = `<small>Pregunta ${q.ronda + 1}/${q.total} - Puntos ${q.puntos}</small>${texto}`;
   if (tipo === 2) {
-    setTimeout(() => Sonido.cantar(objetivo.canto, 1), 1500);
+    despues(() => Sonido.cantar(objetivo.canto, 1), 1500);
     $("#ra-quiz-oir").onclick = () => Sonido.cantar(objetivo.canto, 1);
   }
   q.objetivo = objetivo;
   q.bloqueado = false;
   const r0 = rumbo();
-  setTimeout(() => {
+  despues(() => {
     opciones.forEach((e, i) => {
       const az = r0 + (i - 1) * 0.55;
       const suelo = e.soporte === "pasto" || e.soporte === "agua";
-      setTimeout(() => llegarVolando(e.id, direccion(az, suelo ? -0.28 : 0.05, 3.3), a => { mirarCamara(a.obj, a.esp); a.quiz = true; }), i * 350);
+      despues(() => llegarVolando(e.id, direccion(az, suelo ? -0.28 : 0.05, 3.3), a => { mirarCamara(a.obj, a.esp); a.quiz = true; }), i * 350);
     });
   }, 600);
 }
@@ -544,7 +619,7 @@ function responderQuiz(a) {
     if (ok) { ponerEtiqueta(ok, "Era: " + ok.esp.nombre, "#8EE68E"); celebrar(ok.obj, reloj.elapsedTime); }
   }
   q.ronda++;
-  setTimeout(rondaQuiz, 2600);
+  despues(rondaQuiz, 2600);
 }
 
 // ------------------------------------------------------------------ entrada (toques y arrastre)
@@ -596,15 +671,46 @@ function actualizarMarcas() {
   const u = apuntada.obj.userData;
   const partes = { cabeza: u.cabeza, pico: u.pico, ala: u.alas[1], cola: u.cola, espalda: u.cuerpo, vientre: u.cuerpo, patas: u.ave };
   const desplaz = { vientre: new THREE.Vector3(0, -0.35, 0.3), espalda: new THREE.Vector3(0, 0.35, -0.2), patas: new THREE.Vector3(0, 0.05, 0) };
-  caja.innerHTML = apuntada.esp.marcas.map(([parte, texto], i) => {
+  // Cada marca es un punto sobre la parte del ave y un cartel al lado (hacia donde hay más sitio), unidos por una línea.
+  // Solo se muestran las marcas que quedan dentro de la pantalla.
+  const W = window.innerWidth, H = window.innerHeight;
+  const puntos = [];
+  for (const [parte, texto] of apuntada.esp.marcas) {
     const p = new THREE.Vector3();
     partes[parte].getWorldPosition(p);
     if (desplaz[parte]) p.add(desplaz[parte].clone().multiplyScalar(apuntada.esp.escala).applyQuaternion(apuntada.obj.quaternion));
     p.project(camera);
-    const x = (p.x * 0.5 + 0.5) * window.innerWidth, y = (-p.y * 0.5 + 0.5) * window.innerHeight;
-    const lado = i % 2 ? 1 : -1;
-    return `<div class="marca" style="left:${x}px;top:${y}px"><i></i><span class="${lado > 0 ? "der" : "izq"}" style="transform:translate(${lado > 0 ? 18 : "calc(-100% - 18px)"},${(i - 1) * 46}px)">${texto}</span></div>`;
-  }).join("") + `<div class="marca-nombre">${apuntada.esp.nombre} <em>(${apuntada.esp.cientifico})</em></div>`;
+    const x = (p.x * 0.5 + 0.5) * W, y = (-p.y * 0.5 + 0.5) * H;
+    if (p.z < 1 && x > 8 && x < W - 8 && y > 90 && y < H - 110) puntos.push({ texto, x, y, der: x < W / 2 });
+  }
+  caja.innerHTML = `<svg class="marcas-lineas"></svg>`
+    + puntos.map(m => `<div class="marca" style="left:${m.x}px;top:${m.y}px"><i></i></div>`).join("")
+    + puntos.map(m => `<span class="marca-texto" style="${m.der ? `left:${m.x + 18}` : `right:${W - m.x + 18}`}px;top:${m.y}px;max-width:${Math.min(250, m.der ? W - m.x - 26 : m.x - 26)}px">${m.texto}</span>`).join("")
+    + `<div class="marca-nombre">${apuntada.esp.nombre} <em>(${apuntada.esp.cientifico})</em></div>`;
+  // los carteles se bajan lo necesario para no pisarse entre sí ni pisar el radar, y se mantienen entre la barra de arriba y el nombre del ave
+  const r = $("#ra-radar").getBoundingClientRect();
+  const ocupado = [{ l: r.left - 4, r: r.right + 4, t: r.top - 4, b: r.bottom + 4 }];
+  const carteles = [...caja.querySelectorAll(".marca-texto")].map((el, i) => ({ el, m: puntos[i], r: el.getBoundingClientRect() })).sort((a, b) => a.m.y - b.m.y);
+  carteles.forEach(o => {                                      // de arriba hacia abajo: cada cartel baja hasta no pisar a los anteriores
+    o.h = o.r.height;
+    o.top = o.m.y - o.h / 2;
+    for (let n = 0; n < 8; n++) {
+      const choca = ocupado.find(q => o.r.left < q.r && o.r.right > q.l && o.top < q.b + 6 && o.top + o.h + 6 > q.t);
+      if (!choca) break;
+      o.top = choca.b + 6;
+    }
+    ocupado.push({ l: o.r.left, r: o.r.right, t: o.top, b: o.top + o.h });
+  });
+  for (let i = carteles.length - 1; i >= 0; i--) {             // y de abajo hacia arriba: si se pasaron del nombre del ave, suben
+    const o = carteles[i];
+    let limite = H - 150;
+    for (const p of carteles.slice(i + 1)) if (o.r.left < p.r.right && o.r.right > p.r.left) limite = Math.min(limite, p.top - 6);
+    o.top = Math.max(92, Math.min(o.top, limite - o.h));
+  }
+  caja.firstChild.innerHTML = carteles.map(o => {
+    o.el.style.top = o.top + "px";
+    return `<line x1="${o.m.x}" y1="${o.m.y}" x2="${o.m.der ? o.r.left : o.r.right}" y2="${o.top + o.h / 2}"/>`;
+  }).join("");
 }
 
 function dibujarRadar() {
@@ -755,7 +861,9 @@ export function salir() {
   stream?.getTracks().forEach(t => t.stop());
   stream = null;
   limpiarAves();
-  document.body.classList.remove("en-ra", "ra-zoom", "ra-simulado");
+  if (camera) { camera.fov = fovObjetivo = FOV; camera.updateProjectionMatrix(); }   // si se sale con los binoculares, la próxima vez no empieza con zoom
+  if (video) video.style.transform = "";
+  document.body.classList.remove("en-ra", "ra-zoom", "ra-simulado", "ra-en-quiz");
   $("#ra").hidden = true;
   window.alSalirRA?.();
 }
@@ -791,6 +899,7 @@ async function iniciarXR() {
   $("#xr-salir").onclick = () => sesion.end();
   sesion.addEventListener("select", () => {
     if (!reticula.visible) return;
+    if (aves.size >= MAX_AVES) quitarAve(aves.values().next().value);   // como en Llamar: la más antigua se va y no se acumulan
     const a = agregarAve(actual.id, new THREE.Vector3().setFromMatrixPosition(reticula.matrix), { sinSoporte: true });
     a.obj.scale.setScalar(actual.escala * 0.45);
     const cam = renderer.xr.getCamera();
@@ -831,7 +940,7 @@ window.RA = {
   iniciar, salir, cambiarModo,
   _prueba: {
     tocarPrimera, tocarCorrecta: () => tocarPrimera(a => quiz && a.esp === quiz.objetivo && a.quiz),
-    mirarA: (i = 0) => { const a = [...aves.values()].filter(x => !x.vuelo)[i]; if (a) { arrastre.yaw = Math.atan2(a.obj.position.x, -a.obj.position.z); arrastre.pitch = -Math.asin((a.obj.position.y + 0.25) / a.obj.position.length()); } return a?.esp.id; },
-    estado: () => ({ modo, aves: [...aves.values()].map(a => ({ id: a.esp.id, vuelo: !!a.vuelo, reg: a.registrada })), quiz: quiz && { ronda: quiz.ronda, puntos: quiz.puntos } })
+    mirarA: (i = 0, alto = 0.25) => { const a = [...aves.values()].filter(x => !x.vuelo)[i]; if (a) { arrastre.yaw = Math.atan2(a.obj.position.x, -a.obj.position.z); arrastre.pitch = -Math.asin((a.obj.position.y + alto) / a.obj.position.length()); } return a?.esp.id; },
+    estado: () => ({ modo, fov: camera?.fov, aves: [...aves.values()].map(a => ({ id: a.esp.id, vuelo: !!a.vuelo, reg: a.registrada })), quiz: quiz && { ronda: quiz.ronda, puntos: quiz.puntos } })
   }
 };

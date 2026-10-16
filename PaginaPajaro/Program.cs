@@ -1,4 +1,4 @@
-// Pájaro — guía de avistamiento en Realidad Aumentada de las aves del campus UAO.
+// Aves UAO: guía de avistamiento en Realidad Aumentada de las aves del campus UAO.
 // Sitio estático (HTML, CSS y JavaScript en wwwroot) servido con ASP.NET Core.
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();

@@ -1,4 +1,4 @@
-// Página principal de «Pájaro»: portada, guía UAO, libreta de campo, jornadas y ficha de la RA.
+// Página principal de «Aves UAO»: portada, guía UAO, libreta de campo, jornadas y ficha de la RA.
 (function () {
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -36,7 +36,7 @@
         <img src="img/aves/${e.id}.png" width="360" height="360" loading="lazy" alt="${ok ? e.nombre : ""}">
         <b>${ok ? e.nombre : "¿?"}</b><small>${ok ? e.cientifico : "Encuéntrala en RA"}</small></div>`;
     }).join("");
-    $("#lib-fotos-grid").innerHTML = d.fotos.map((f, i) => `<a href="${f}" download="pajaro-uao-${i + 1}.jpg"><img src="${f}" alt="Foto de campo ${i + 1}"></a>`).join("");
+    $("#lib-fotos-grid").innerHTML = d.fotos.map((f, i) => `<a href="${f}" download="aves-uao-${i + 1}.jpg"><img src="${f}" alt="Foto de campo ${i + 1}"></a>`).join("");
   }
   $("#lib-borrar").addEventListener("click", () => {
     if (confirm("¿Borrar las aves registradas, fotos y puntaje de este dispositivo?")) { localStorage.removeItem(CLAVE); pintarLibreta(); }
@@ -63,8 +63,8 @@
   }).join("");
 
   function pintarListado(filtro = "") {
-    const f = norm(filtro);
-    const visibles = U.lista.filter(s => !f || norm(`${s.comun} ${s.cientifico} ${s.ingles} ${s.familia}`).includes(f));
+    const palabras = norm(filtro).split(/\s+/).filter(Boolean);   // cada palabra se busca por separado: «garza ganado» encuentra «Garza de ganado»
+    const visibles = U.lista.filter(s => { const t = norm(`${s.comun} ${s.cientifico} ${s.ingles} ${s.familia}`); return palabras.every(p => t.includes(p)); });
     $("#conteo").textContent = `${visibles.length} de ${U.lista.length} especies`;
     const ordenes = [...new Set(visibles.map(s => s.orden))];
     $("#listado").innerHTML = ordenes.map(o => `

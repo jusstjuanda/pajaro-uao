@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Galería 3D - Pájaro</title>
+  <title>Galería 3D - Aves UAO</title>
   <style>
     html, body { margin: 0; height: 100%; background: #F7F1E3; font-family: Inter, system-ui, sans-serif; color: #1D2A25; }
     canvas { display: block; width: 100%; height: 100%; }
@@ -30,20 +30,25 @@
     const cam = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
     scene.add(new THREE.HemisphereLight("#fff6e6", "#8a8f74", 1.5));
     const sol = new THREE.DirectionalLight("#fff1d6", 1.8); sol.position.set(3, 6, 5); scene.add(sol);
-    const cols = 4, aves = [];
-    E.forEach((e, i) => {
+    const aves = [];
+    E.forEach(e => {
       const a = crearAve(e);
       a.scale.setScalar(e.escala * 1.0);
-      a.position.set((i % cols - (cols - 1) / 2) * 2.2, -Math.floor(i / cols) * 2.1 + 1.6, 0);
       a.rotation.y = 0.9;
       scene.add(a); aves.push(a);
     });
     const etiquetas = document.getElementById("nombres");
     etiquetas.innerHTML = E.map(e => `<div>${e.nombre}<em>${e.cientifico}</em></div>`).join("");
+    // 4 columnas en pantalla ancha y 2 en celular vertical (así no se cortan las aves ni se pisan los nombres);
+    // la cámara se aleja lo justo para que quepa todo el conjunto
     function tam() {
       r.setSize(innerWidth, innerHeight);
       cam.aspect = innerWidth / innerHeight;
-      cam.position.set(0, -0.3, innerWidth < innerHeight ? 26 : 15);
+      const cols = innerWidth < innerHeight ? 2 : 4, filas = Math.ceil(aves.length / cols);
+      aves.forEach((a, i) => a.position.set((i % cols - (cols - 1) / 2) * 2.2, -Math.floor(i / cols) * 2.1 + (filas - 1) * 1.05 - 0.5, 0));
+      const k = 2 * Math.tan(16 * Math.PI / 180);   // alto visible por unidad de distancia (campo de visión de 32°)
+      const distancia = Math.max(15, ((cols - 1) * 2.2 + 2.6) / (k * cam.aspect), ((filas - 1) * 2.1 + 3.2) / k);
+      cam.position.set(0, -0.3, distancia);
       cam.lookAt(0, -0.4, 0);
       cam.updateProjectionMatrix();
     }

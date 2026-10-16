@@ -145,9 +145,11 @@ function pasto() {
 }
 function agua() {
   const g = new THREE.Group();
-  g.add(pieza(cil(), mat("#4f8fa8", { roughness: 0.15, metalness: 0.1 }), [0, -0.04, 0], [3, 0.06, 3]));
-  g.add(pieza(geo("anillo", () => new THREE.TorusGeometry(0.6, 0.02, 4, 24)), mat("#d6eef5"), [0, 0.0, 0], null, [Math.PI / 2, 0, 0]));
-  for (const [x, z] of [[-1, 0.6], [1.05, -0.5]]) g.add(pieza(cil(), mat("#5e8f3c"), [x, 0.25, z], [0.05, 0.6, 0.05]));
+  g.add(pieza(cil(), mat("#8a7a58"), [0, -0.07, 0], [6, 0.05, 6]));        // orilla de barro
+  g.add(pieza(cil(), mat("#4f8fa8", { roughness: 0.15, metalness: 0.1 }), [0, -0.04, 0], [5.2, 0.06, 5.2]));
+  const onda = (radio, nombre) => pieza(geo(nombre, () => new THREE.TorusGeometry(radio, 0.02, 4, 28)), mat("#d6eef5"), [0, 0.0, 0], null, [Math.PI / 2, 0, 0]);
+  g.add(onda(0.9, "anillo"), onda(1.7, "anillo-grande"));
+  for (const [x, z] of [[-2, 0.9], [2.05, -0.9], [-1.2, -1.9], [1.4, 1.8], [0.2, -2.25]]) g.add(pieza(cil(), mat("#5e8f3c"), [x, 0.3, z], [0.05, 0.7, 0.05]));
   return g;
 }
 function flor() {

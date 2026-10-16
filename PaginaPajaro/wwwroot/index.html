@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0E2621">
-  <title>Pájaro - Aves del campus UAO en Realidad Aumentada</title>
+  <title>Aves UAO - Guía de avistamiento en Realidad Aumentada</title>
   <meta name="description" content="Guía de avistamiento en Realidad Aumentada de las aves del campus de la Universidad Autónoma de Occidente, alimentada con la Guía ilustrada de aves UAO.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,9 +35,10 @@
   <!-- ======================= PORTADA ======================= -->
   <header class="hero" id="inicio">
     <canvas id="cielo" aria-hidden="true"></canvas>
+    <img class="arco-palmas" src="img/deco/arco-palmas.svg" width="1000" height="570" alt="">
     <div class="hero-contenido">
-      <p class="kicker">Universidad Autónoma de Occidente · Cali</p>
-      <h1>Pájaro</h1>
+      <p class="kicker">Universidad Autónoma de Occidente, Cali</p>
+      <h1>Aves <img src="img/logo-uao.png" width="711" height="342" alt="UAO"></h1>
       <p class="lema">Guía de avistamiento en <strong>Realidad Aumentada</strong> de las aves del campus UAO.</p>
       <div class="hero-botones">
         <button class="btn-principal" data-iniciar-ra>Iniciar la experiencia RA</button>
@@ -49,7 +50,7 @@
   </header>
 
   <nav class="barra" aria-label="Secciones">
-    <a href="#inicio" class="marca">Pájaro</a>
+    <a href="#inicio" class="marca" aria-label="Aves UAO, inicio">Aves <img src="img/logo-uao.png" width="711" height="342" alt=""></a>
     <div class="enlaces">
       <a href="#como">Cómo funciona</a>
       <a href="#guia">Guía UAO</a>
@@ -61,7 +62,7 @@
 
   <main>
     <!-- ======================= CÓMO FUNCIONA ======================= -->
-    <section id="como" class="seccion">
+    <section id="como" class="seccion con-hojas">
       <div class="contenedor">
         <p class="etiqueta revelar">Realidad Aumentada</p>
         <h2 class="revelar">Las aves del campus UAO</h2>
@@ -83,7 +84,7 @@
     </section>
 
     <!-- ======================= GUÍA ======================= -->
-    <section id="guia" class="seccion seccion-clara">
+    <section id="guia" class="seccion seccion-clara con-hojas">
       <div class="contenedor">
         <p class="etiqueta revelar">Base de datos de aves UAO</p>
         <h2 class="revelar">Guía de las aves del campus</h2>
@@ -105,7 +106,7 @@
     </section>
 
     <!-- ======================= LIBRETA ======================= -->
-    <section id="libreta" class="seccion">
+    <section id="libreta" class="seccion con-hojas">
       <div class="contenedor">
         <p class="etiqueta revelar">Tu progreso</p>
         <h2 class="revelar">Mi libreta de campo</h2>
@@ -136,7 +137,7 @@
 
   <footer class="pie">
     <div class="contenedor">
-      <p class="marca-pie">Pájaro</p>
+      <p class="marca-pie">Aves <img src="img/logo-uao.png" width="711" height="342" alt="UAO"></p>
       <p>Proyecto académico. Fundamentos de Realidad Virtual. Universidad Autónoma de Occidente.</p>
       <p class="fuentes">Datos, textos y fotografías: <em>Guía ilustrada de las aves del campus de la UAO</em>, primera edición 2023, Escuela de Turismo UAO (autores: Germán Morales Zúñiga y Natalia Lenis Sánchez; fotografías: Juan Manuel Quintero, Natalia Lenis Sánchez y Diana Carolina Campo Daza). Más información de cada especie en WikiAves de la Universidad Icesi.
       Modelos 3D y cantos de la experiencia RA recreados por código para este proyecto (no son grabaciones reales).</p>
