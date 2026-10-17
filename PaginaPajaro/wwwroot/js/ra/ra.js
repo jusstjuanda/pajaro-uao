@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import { crearAve, crearSoporte, animarAve, cantar, aletear, celebrar, etiqueta, tarjeta, notaMusical } from "./aves3d.js";
 import { crearSimulado, radioDe, OBSTACULOS } from "./campus.js";
+import { crearRecorrido } from "./recorrido.js";
 
 const E = window.ESPECIES_RA;
 const porId = Object.fromEntries(E.map(e => [e.id, e]));
@@ -29,6 +30,10 @@ let objetos = [];                    // utilería del comedero
 let quiz = null;
 let apuntada = null;
 const ray = new THREE.Raycaster();
+// recorrido 3D por el campus (cinemática de recorrido.js): mientras dura, la RA se pausa y se esconde
+let recorrido = null, enRecorrido = false, cargandoRecorrido = false, pixelAntes = 1;
+const colaRecorrido = [];            // lo que tocaba hacer durante el recorrido (ver despues): se hace al terminar
+const qInicioGiro = new THREE.Quaternion(), qRelativo = new THREE.Quaternion(), qRelSuave = new THREE.Quaternion();
 
 // ------------------------------------------------------------------ utilidades
 function rumbo() {
@@ -79,7 +84,7 @@ function quitarAve(a) {
 // Ejecuta algo más tarde y lo anota. Si el usuario cambia de modo o la escena se limpia antes de que llegue la hora,
 // se cancela: así no aparecen aves de más ni se repiten las que ya se pidieron.
 function despues(fn, ms) {
-  const t = setTimeout(() => { pendientes.delete(t); fn(); }, ms);
+  const t = setTimeout(() => { pendientes.delete(t); if (enRecorrido) colaRecorrido.push(fn); else fn(); }, ms);   // en pleno recorrido espera a que termine
   pendientes.add(t);
   return t;
 }
@@ -88,6 +93,7 @@ function cancelarPendientes() {
   pendientes.forEach(clearTimeout);
   pendientes.clear();
   llamadas.clear();
+  colaRecorrido.length = 0;
 }
 function limpiarAves() {
   cancelarPendientes();
@@ -702,6 +708,7 @@ function configurarEntrada(el) {
     const dx = e.clientX - arrastre.x, dy = e.clientY - arrastre.y;
     arrastre.movido += Math.abs(dx) + Math.abs(dy);
     arrastre.x = e.clientX; arrastre.y = e.clientY;
+    if (enRecorrido) { recorrido.arrastrar(dx, dy); return; }       // en el recorrido, arrastrar = mirar alrededor
     if (!usandoGiro) {
       const k = (camera.fov / FOV) * 0.005;
       arrastre.yaw -= dx * k;
@@ -710,7 +717,7 @@ function configurarEntrada(el) {
   });
   el.addEventListener("pointerup", e => {
     arrastre.activo = false;
-    if (arrastre.movido > 12) return;
+    if (arrastre.movido > 12 || enRecorrido) return;
     const a = avePorPantalla(e.clientX, e.clientY);
     if (a) MODOS[modo].tocar?.(a);
     else if (modo === "quiz") tocarOpcionQuiz(e.clientX, e.clientY);
@@ -797,7 +804,54 @@ function dibujarRadar() {
   g.fillStyle = "#fff"; g.beginPath(); g.arc(c, c, 4, 0, Math.PI * 2); g.fill();
 }
 
+// ------------------------------------------------------------------ recorrido 3D por el campus
+// La cinemática vive en recorrido.js y no toca nada de la RA: aquí solo se pausa la RA (se esconden las aves, el campus simulado y los
+// controles) y se devuelve todo igual al terminar. Con giroscopio, mover el celular mira alrededor; si no, se arrastra.
+async function iniciarRecorrido() {
+  if (!activo || enRecorrido || cargandoRecorrido) return;
+  if (modo === "quiz") { aviso("El recorrido no está disponible durante el quiz.", 2600, true); return; }
+  cargandoRecorrido = true;
+  aviso("Preparando el recorrido…", 4000);
+  await new Promise(r => setTimeout(r, 80));          // deja que el aviso se pinte antes del trabajo pesado
+  try {
+    if (!recorrido) recorrido = crearRecorrido({ escena: scene, camara: camera, sonido: window.Sonido, alTerminar: finRecorrido });
+    pixelAntes = renderer.getPixelRatio();
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));    // el campus tiene más polígonos que la RA: un poco menos de píxeles para que corra suave
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    $("#ra-ficha").hidden = true;
+    $("#ra").classList.add("ra-en-recorrido");
+    raiz.visible = false; simulado.visible = false;
+    qInicioGiro.copy(qGiro); qRelSuave.identity();
+    enRecorrido = true;
+    recorrido.iniciar($("#ra"), usandoGiro ? "Mueve el celular o arrastra para mirar alrededor" : "Arrastra para mirar alrededor");
+  } catch (e) {
+    console.error("recorrido:", e);
+    if (recorrido?.activo) recorrido.terminar(true); else finRecorrido(true);
+    aviso("No se pudo iniciar el recorrido.", 3000);
+  }
+  cargandoRecorrido = false;
+}
+function finRecorrido(saltado) {
+  enRecorrido = false;
+  if (!renderer) return;
+  renderer.setPixelRatio(pixelAntes);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  $("#ra").classList.remove("ra-en-recorrido");
+  raiz.visible = true; simulado.visible = !usandoCamara;
+  colaRecorrido.splice(0).forEach(fn => fn());          // lo que la RA tenía pendiente (llegadas de aves, etc.)
+  if (activo) aviso(saltado ? "Recorrido omitido. Seguimos en la RA." : "Fin del recorrido. Seguimos en la RA.", 2600);
+}
+function cicloRecorrido() {
+  const dt = Math.min(0.05, reloj.getDelta());
+  let giro = null;
+  if (usandoGiro) { qRelativo.copy(qInicioGiro).invert().multiply(qGiro); qRelSuave.slerp(qRelativo, 0.35); giro = qRelSuave; }
+  try { recorrido.actualizar(dt, giro); }
+  catch (e) { console.error("recorrido:", e); if (recorrido.activo) recorrido.terminar(true); else finRecorrido(true); }   // pase lo que pase, la RA no se queda congelada
+  renderer.render(scene, camera);
+}
+
 function ciclo() {
+  if (enRecorrido) { cicloRecorrido(); return; }
   const dt = Math.min(0.05, reloj.getDelta());
   const t = reloj.elapsedTime;
   // orientación de la cámara
@@ -904,6 +958,7 @@ export async function iniciar() {
     $("#ra-obturador").addEventListener("click", tomarFoto);
     $("#ra-salir").addEventListener("click", salir);
     $("#ra-recentrar").addEventListener("click", () => { arrastre.yaw = arrastre.pitch = 0; cambiarModo(modo); });
+    $("#ra-recorrido").addEventListener("click", iniciarRecorrido);
   }
   const [giro, s] = await Promise.all([permisoGiro, permisoCam]);
   stream = s;
@@ -924,7 +979,9 @@ export async function iniciar() {
 }
 
 export function salir() {
+  const enPleno = enRecorrido;
   activo = false;
+  if (enPleno) recorrido.terminar(true);              // si se sale en pleno recorrido, primero se cierra la cinemática
   MODOS[modo]?.salir?.();
   renderer?.setAnimationLoop(null);
   stream?.getTracks().forEach(t => t.stop());
@@ -1009,6 +1066,7 @@ window.RA = {
   iniciar, salir, cambiarModo,
   _prueba: {
     tocarPrimera,
+    iniciarRecorrido, recorridoActivo: () => enRecorrido, saltarRecorrido: () => recorrido?.terminar(true), camaraQ: () => camera.quaternion.toArray(),
     // responde la pregunta actual del quiz, bien o mal (ave, tarjeta o alimento); devuelve el tipo de pregunta o null si aún no hay opciones
     quizResponder: (bien = true) => {
       const q = quiz;

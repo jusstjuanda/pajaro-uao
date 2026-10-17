@@ -19,11 +19,12 @@ export function fusionar(grupo, { profundo = true, plano = true, rugosidad = 0.8
     const m = o.material;
     if (!material && !(m.isMeshStandardMaterial && !m.transparent && !m.map && m.emissive.getHex() === 0)) return;
     const g = o.geometry, p = g.attributes.position, n = g.attributes.normal;
+    const cv = m.vertexColors && g.attributes.color;      // una malla ya fusionada conserva sus colores por vértice
     const mat4 = new THREE.Matrix4().multiplyMatrices(inversa, o.matrixWorld), mat3 = new THREE.Matrix3().getNormalMatrix(mat4);
     for (let i = 0; i < p.count; i++) {
       v.fromBufferAttribute(p, i).applyMatrix4(mat4); pos.push(v.x, v.y, v.z);
       nv.fromBufferAttribute(n, i).applyMatrix3(mat3).normalize(); nor.push(nv.x, nv.y, nv.z);
-      if (!material) col.push(m.color.r, m.color.g, m.color.b);
+      if (!material) { if (cv) col.push(cv.getX(i) * m.color.r, cv.getY(i) * m.color.g, cv.getZ(i) * m.color.b); else col.push(m.color.r, m.color.g, m.color.b); }
     }
     if (g.index) for (let i = 0; i < g.index.count; i++) idx.push(g.index.getX(i) + base);
     else for (let i = 0; i < p.count; i++) idx.push(i + base);

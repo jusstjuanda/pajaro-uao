@@ -261,7 +261,7 @@ export function crearSimulado() {
 }
 
 // Palma real: tronco gris que se afina, cuello verde y corona de hojas largas que salen hacia afuera y se doblan hacia abajo.
-function crearPalmera(rnd, hoja, tronco) {
+export function crearPalmera(rnd, hoja, tronco) {
   const g = new THREE.Group();
   const alto = 9 + rnd() * 3;
   const t = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.32, alto, 8), tronco);
@@ -291,7 +291,7 @@ function crearPalmera(rnd, hoja, tronco) {
 }
 
 // Árbol de copa redonda y frondosa: tronco con base ancha, dos ramas y siete masas de hojas de distintos verdes.
-function crearArbol(rnd, hoja, madera) {
+export function crearArbol(rnd, hoja, madera) {
   const g = new THREE.Group();
   const alto = 3.6 + rnd() * 1.2;
   const t = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.46, alto, 7), madera); t.position.y = alto / 2; g.add(t);

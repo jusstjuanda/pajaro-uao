@@ -25,6 +25,7 @@
     <symbol id="i-tamano" viewBox="0 0 24 24"><path d="M12 21.5s-6.5-5.7-6.5-11.5a6.5 6.5 0 0 1 13 0c0 5.8-6.5 11.5-6.5 11.5z"/><circle cx="12" cy="10" r="2.3"/></symbol>
     <symbol id="i-medalla" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5.5"/><path d="M8.6 13.4 7 21l5-2.6 5 2.6-1.6-7.6"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></symbol>
+    <symbol id="i-recorrido" viewBox="0 0 24 24"><rect x="2.8" y="5.5" width="18.4" height="13" rx="3.2"/><path d="M10.2 9.2v5.6l4.8-2.8z"/></symbol>
     <symbol id="i-corazon" viewBox="0 0 24 24"><path d="M12 20.5S4.5 15.7 4.5 9.8A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6c0 5.9-7.5 10.7-7.5 10.7z"/></symbol>
     <symbol id="i-flor" viewBox="0 0 24 24"><path d="M12 21v-9"/><path d="M12 12c-4 0-5-4-5-7 2 0 4 1 5 3 1-2 3-3 5-3 0 3-1 7-5 7z"/><path d="M12 17.5c-2.2 0-3.8-1-4.8-2.8"/></symbol>
     <symbol id="i-fruta" viewBox="0 0 24 24"><path d="M12 8c-3-2-7 0-7 5 0 4 3 8 7 8s7-4 7-8c0-5-4-7-7-5z"/><path d="M12 8c0-2 1-4 3-5"/></symbol>
@@ -159,7 +160,10 @@
     <div class="ra-arriba">
       <button id="ra-salir" class="ra-icono" aria-label="Salir de la RA">✕</button>
       <div class="ra-titulos"><b id="ra-titulo">Avistar</b><small id="ra-estado"></small></div>
-      <button id="ra-recentrar" class="ra-icono" aria-label="Volver a ubicar las aves frente a mí">⟲</button>
+      <div class="ra-der">
+        <button id="ra-recorrido" class="ra-icono" aria-label="Ver el recorrido 3D por el campus" title="Recorrido 3D por el campus"><svg class="ico"><use href="#i-recorrido"/></svg></button>
+        <button id="ra-recentrar" class="ra-icono" aria-label="Volver a ubicar las aves frente a mí">⟲</button>
+      </div>
     </div>
     <canvas id="ra-radar" class="ra-radar" width="120" height="120" aria-hidden="true"></canvas>
     <div id="ra-pregunta" class="ra-pregunta" hidden></div>
