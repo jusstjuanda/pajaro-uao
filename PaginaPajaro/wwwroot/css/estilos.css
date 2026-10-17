@@ -193,7 +193,7 @@ button { font: inherit; cursor: pointer; }
 .ra-icono { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(14,38,33,.7); color: #fff; font-size: 1.2rem; backdrop-filter: blur(6px); }
 .ra-arriba #ra-salir { justify-self: start; }
 .ra-der { display: flex; gap: 8px; justify-content: flex-end; }
-body.ra-en-quiz #ra-recorrido { opacity: .45; }
+body.ra-en-quiz .ra-cine { opacity: .45; }
 .ra-titulos { text-align: center; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
 .ra-titulos b { display: block; font-family: var(--serif); font-size: 1.3rem; }
 .ra-titulos small { font-size: .72rem; opacity: .85; }
@@ -216,12 +216,14 @@ body.ra-en-quiz #ra-recorrido { opacity: .45; }
 .ra-modo span { font-size: 1.45rem; line-height: 1; }
 .ico { display: inline-block; width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: -.15em; }
 .ra-modo.activo { background: var(--ambar); color: #20160a; }
-/* en celulares angostos los 6 botones caben sin cortarse (antes el último, «Quiz», quedaba fuera de pantalla) */
-@media (max-width: 420px) {
+.ra-modo.ra-cine { background: var(--coral); color: #fff; animation: cine-pulso 1.6s ease-in-out 4; }   /* la cinemática no es un modo: es la acción destacada de la barra */
+@keyframes cine-pulso { 0%, 100% { box-shadow: 0 0 0 0 rgba(228,103,62,.65); } 50% { box-shadow: 0 0 0 8px rgba(228,103,62,0); } }
+/* en celulares angostos los 7 botones caben sin cortarse (cada uno toma el ancho de su texto; antes el último quedaba fuera de pantalla) */
+@media (max-width: 520px) {
   .ra-modos { gap: 3px; padding-left: 4px; padding-right: 4px; }
-  .ra-modo { flex: 1 1 0; min-width: 0; padding: 8px 1px; font-size: .6rem; }
+  .ra-modo { flex: 1 1 auto; min-width: 0; padding: 8px 3px; font-size: .58rem; }
 }
-@media (max-width: 345px) { .ra-modo { font-size: .54rem; } }
+@media (max-width: 345px) { .ra-modo { font-size: .52rem; } }
 .ra-panel { position: absolute; left: 10px; right: 10px; bottom: calc(86px + env(safe-area-inset-bottom)); background: rgba(14,38,33,.92); border-radius: 18px; padding: 12px; backdrop-filter: blur(8px); }
 .ra-panel-nota { margin: 0 0 8px; font-size: .8rem; color: #CFDDD5; }
 .ra-panel-lista { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
@@ -302,6 +304,8 @@ body.ra-simulado .ra-titulos small { color: var(--ambar); }
 .rec-titulo.ver { opacity: 1; }
 .rec-ayuda { position: absolute; left: 0; right: 0; bottom: calc(10% + env(safe-area-inset-bottom)); margin: 0; padding: 0 16px; text-align: center; font-size: .82rem; text-shadow: 0 1px 8px rgba(0,0,0,.7); animation: rec-ayuda 9s forwards; }
 @keyframes rec-ayuda { 0%, 70% { opacity: .95; } 100% { opacity: 0; } }
-.rec-saltar { pointer-events: auto; position: absolute; right: 14px; top: max(12px, env(safe-area-inset-top)); min-height: 44px; border: 0; border-radius: 999px; padding: 0 20px; font-weight: 700; font-size: .95rem; background: rgba(14,38,33,.78); color: #fff; backdrop-filter: blur(6px); }
+.rec-botones { position: absolute; right: 14px; top: max(12px, env(safe-area-inset-top)); display: flex; gap: 8px; }
+.rec-botones button { pointer-events: auto; min-height: 44px; border: 0; border-radius: 999px; padding: 0 20px; font-weight: 700; font-size: .95rem; background: rgba(14,38,33,.78); color: #fff; backdrop-filter: blur(6px); }
+.rec-botones .rec-vel { min-width: 56px; padding: 0 14px; }
 .rec-barra { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,.25); }
 .rec-barra i { display: block; height: 100%; width: 0; background: var(--ambar); }

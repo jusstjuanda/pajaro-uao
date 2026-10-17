@@ -12,7 +12,7 @@ const PASOS_BASE = [
   [[0, 62, 240], [0, 8, 150]], [[0, 20, 190], [0, 6, 140]], [[0, 8.5, 160], [0, 6.5, 120]], [[0, 5.5, 128], [0, 6, 95]],
   [[0, 5, 100], [0, 7, 70]], [[0, 5, 76], [0, 6, 40]], [[0, 6, 52], [0, 8, 22]], [[0, 16, 32], [0, 0, 2]],
   [[-4, 36, 26], [0, 0, 2]], [[-44, 40, 8], [0, 2, 2]], [[-42, 38, -20], [0, 2, 0]], [[-12, 28, -46], [0, 4, -70]], [[0, 26, -66], [0, 5, -110]], [[34, 24, -78], [52, 0, -97]],
-  [[66, 14, -90], [52, 1, -97]], [[40, 13, -114], [26, 3, -142]], [[26, 11, -124], [28, 2, -150]], [[3, 13, -138], [-2, 5, -178]], [[-1, 9, -166], [-3, 5, -200]],
+  [[66, 24, -90], [52, 1, -97]], [[40, 22, -114], [26, 3, -142]], [[26, 11, -124], [28, 2, -150]], [[3, 13, -138], [-2, 5, -178]], [[-1, 9, -166], [-3, 5, -200]],
   [[-3, 8, -194], [-4, 5, -232]], [[-14, 11, -236], [-4, 4, -198]], [[-6, 14, -260], [-4, 3, -305]], [[24, 20, -315], [-2, 0, -345]], [[62, 32, -295], [20, 0, -330]],
   [[90, 50, -240], [132, 0, -60]], [[0, 80, -150], [0, 4, -20]]
 ];
@@ -94,14 +94,16 @@ export function crearRecorrido({ escena, camara, alTerminar = () => {}, onSubtit
   let campus = null, bandadas = null, ui = null;
   const curvaP = new THREE.CatmullRomCurve3(PASOS.map(p => new THREE.Vector3(...p[0])), false, "centripetal");
   const curvaT = new THREE.CatmullRomCurve3(PASOS.map(p => new THREE.Vector3(...p[1])), false, "centripetal");
-  const est = { activo: false, t: 0, yaw: 0, pitch: 0, guardado: null, subt: "" };
+  const est = { activo: false, t: 0, tAnim: 0, vel: 1, yaw: 0, pitch: 0, guardado: null, subt: "" };
   const qCam = new THREE.Quaternion(), mirar = new THREE.Matrix4(), arriba = new THREE.Vector3(0, 1, 0), ejeX = new THREE.Vector3(1, 0, 0), pos = new THREE.Vector3(), objetivo = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), adelante = new THREE.Vector3();
 
   function crearInterfaz(ayuda) {
     const div = document.createElement("div");
     div.className = "ra-recorrido";
-    div.innerHTML = `<p class="rec-titulo" aria-live="polite"></p><p class="rec-ayuda">${ayuda}</p><button class="rec-saltar" type="button">Saltar</button><div class="rec-barra"><i></i></div>`;
+    div.innerHTML = `<p class="rec-titulo" aria-live="polite"></p><p class="rec-ayuda">${ayuda}</p><div class="rec-botones"><button class="rec-vel" type="button" aria-label="Velocidad del recorrido">×1</button><button class="rec-saltar" type="button">Saltar</button></div><div class="rec-barra"><i></i></div>`;
     div.querySelector(".rec-saltar").addEventListener("click", e => { e.stopPropagation(); terminar(true); });
+    const bv = div.querySelector(".rec-vel");                                    // velocidad: ×1 → ×2 → ×4 → ×1
+    bv.addEventListener("click", e => { e.stopPropagation(); est.vel = est.vel === 1 ? 2 : est.vel === 2 ? 4 : 1; bv.textContent = "×" + est.vel; });
     return div;
   }
 
@@ -120,7 +122,7 @@ export function crearRecorrido({ escena, camara, alTerminar = () => {}, onSubtit
     bandadas.cuerpos.visible = bandadas.alasI.visible = bandadas.alasD.visible = true;
     ui = crearInterfaz(ayuda);
     (contenedor || document.body).appendChild(ui);
-    est.activo = true; est.t = 0; est.yaw = 0; est.pitch = 0; est.subt = "";
+    est.activo = true; est.t = 0; est.tAnim = 0; est.vel = 1; est.yaw = 0; est.pitch = 0; est.subt = "";
     sonido?.ambiente?.(true);
   }
 
@@ -144,7 +146,7 @@ export function crearRecorrido({ escena, camara, alTerminar = () => {}, onSubtit
   // un cuadro de la cinemática; giro = rotación extra opcional (giroscopio del celular, relativa al inicio)
   function actualizar(dt, giro = null) {
     if (!est.activo) return false;
-    est.t += dt;
+    est.t += dt * est.vel; est.tAnim += dt;                      // la velocidad solo acelera el avance de la cámara; aves y fuentes siguen a su ritmo
     const f = Math.min(1, est.t / DURACION);
     const u = THREE.MathUtils.smoothstep(f, 0, 0.04) * 0.04 + f * 0.92 + THREE.MathUtils.smoothstep(f, 0.96, 1) * 0.04;   // arranca y termina suave
     const tp = curvaP.getUtoTmapping(Math.min(0.999, u));         // velocidad constante por la posición; el punto de mira usa el mismo parámetro para ir siempre alineado
@@ -161,9 +163,9 @@ export function crearRecorrido({ escena, camara, alTerminar = () => {}, onSubtit
       curvaP.getPoint(curvaP.getUtoTmapping(Math.min(0.999, u + 0.014)), adelante);
       bandadas.guia.x = adelante.x; bandadas.guia.y = adelante.y; bandadas.guia.z = adelante.z;
       bandadas.guia.dir.copy(adelante).sub(pos).normalize();
-      bandadas.actualizar(est.t, pos);
+      bandadas.actualizar(est.tAnim, pos);
     }
-    campus.userData.animar?.(est.t);
+    campus.userData.animar?.(est.tAnim);
     // subtítulo y barra de avance
     if (ui) {
       const txt = lugar(f, pos);

@@ -948,7 +948,7 @@ export async function iniciar() {
     configurarEntrada(renderer.domElement);
     window.addEventListener("resize", ajustar);
     window.addEventListener("deviceorientation", alGirar);
-    document.querySelectorAll(".ra-modo").forEach(b => b.addEventListener("click", () => cambiarModo(b.dataset.modo)));
+    document.querySelectorAll(".ra-modo[data-modo]").forEach(b => b.addEventListener("click", () => cambiarModo(b.dataset.modo)));
     $("#ra-panel").addEventListener("click", e => {
       const b = e.target.closest("button");
       if (!b) return;

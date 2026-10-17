@@ -568,11 +568,33 @@ export function crearCampusReal({ evitar = [] } = {}) {          // evitar: [x, 
   const lg = lago(animar, 10, 8.5); lg.position.set(52, 0, -97); g.add(lg);
   const e1 = lago(animar, 5, 5, { seed: 31 }); e1.position.set(31, 0, -21); g.add(e1);
   const e2 = lago(animar, 6.5, 5, { fuente: false, seed: 41 }); e2.position.set(-58, 0, -86); g.add(e2);
-  // alrededor del lago: árboles frondosos (fuera del camino de la cámara), piedras grandes de decoración y dos bancas mirando al agua
+  // alrededor del lago: BOSQUE frondoso (dos anillos de árboles grandes, matas en la orilla y enredaderas colgando de las copas), piedras grandes y dos bancas mirando al agua
   const orilla = new THREE.Group(), rl = semilla(612), hojasL = ["#3F7A36", "#4F8F3E", "#5BA04A", "#356B30"].map(c => std(c)), maderaL = std("#6A4A2E");
-  for (const [x, z, esc] of [[68, -101, 2.3], [64, -112, 1.9], [71, -86, 2.1], [58, -80, 2], [44, -109, 2.2], [75, -96, 1.8], [40, -84, 1.9], [47, -76, 1.8], [80, -108, 2], [78, -78, 2.1]]) {
-    if (!evitar.every(([cx, cz, r]) => Math.hypot(x - cx, z - cz) > r)) continue;
+  const bancas = [[65.5, -97], [52, -85.2]];
+  const libreCam = (x, z) => evitar.every(([cx, cz, r]) => Math.hypot(x - cx, z - cz) > r);
+  const plantados = [];
+  for (let i = 0; i < 900 && plantados.length < 30; i++) {
+    const a = rl() * 6.283, k = 1.4 + rl() * 1.3, x = 52 + Math.cos(a) * 12 * k, z = -97 + Math.sin(a) * 10.2 * k;
+    if (x < 44 || x > 90 || z < -114 || z > -66 || !libreCam(x, z)) continue;                         // solo en el hueco libre entre Aulas 1/2, la cafetería y la vía lateral
+    if (bancas.some(([bx, bz]) => Math.hypot(x - bx, z - bz) < 6) || plantados.some(([px, pz]) => Math.hypot(x - px, z - pz) < 5.2)) continue;
+    const esc = 1.9 + rl() * 0.9;
     const t = crearArbol(rl, hojasL, maderaL); t.position.set(x, 0, z); t.rotation.y = rl() * 6.28; t.scale.setScalar(esc); orilla.add(t);
+    plantados.push([x, z]);
+    for (let v = 0; v < 6; v++) {                                                                       // enredaderas: tiras verdes que cuelgan del borde de la copa
+      const L = 2.2 + rl() * 3, ang = rl() * 6.283, rad = (2.2 + rl() * 0.9) * esc * 0.95;
+      const tira = caja(0.3 + rl() * 0.25, L, 0.07, std(["#3F8F3A", "#5BA04A", "#2F7A3A"][v % 3]), x + Math.cos(ang) * rad, 4.1 * esc - L / 2, z + Math.sin(ang) * rad);
+      tira.rotation.y = ang; orilla.add(tira);
+    }
+    for (let m = 0; m < 3; m++) {                                                                       // matas al pie del árbol
+      const mata = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8 + rl() * 0.9, 1), std(["#2F6A3A", "#4F8F3E", "#6BAF4A", "#C2297A"][(m + plantados.length) % 4]));
+      mata.position.set(x + (rl() - 0.5) * 6, 0.6, z + (rl() - 0.5) * 6); mata.scale.y = 0.75; orilla.add(mata);
+    }
+  }
+  for (let i = 0; i < 44; i++) {                                                                        // arbustos densos en la orilla (sin tapar las bancas)
+    const a = rl() * 6.283, k = 1.18 + rl() * 0.55, x = 52 + Math.cos(a) * 12 * k, z = -97 + Math.sin(a) * 10.2 * k;
+    if (bancas.some(([bx, bz]) => Math.hypot(x - bx, z - bz) < 3.2) || x < 42 || z < -116) continue;
+    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7 + rl() * 0.9, 1), std(["#2F6A3A", "#4F8F3E", "#6BAF4A", "#3F7A36", "#C2297A"][i % 5]));
+    m.position.set(x, 0.55, z); m.scale.y = 0.8; orilla.add(m);
   }
   const grises = ["#8A8578", "#7E7A6E", "#9A958A", "#6F6B60"];
   for (let i = 0; i < 16; i++) {
