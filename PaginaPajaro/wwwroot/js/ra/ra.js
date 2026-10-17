@@ -348,7 +348,7 @@ export function cambiarModo(m) {
 function abrirPanel(cual) {
   const p = $("#ra-panel");
   if (cual === "llamar") {
-    p.innerHTML = `<p class="ra-panel-nota">Toca un canto. En la vida real usa el «playback» con moderación: puede estresar a las aves.</p>
+    p.innerHTML = `<p class="ra-panel-nota">Toca un canto y el ave que lo reconoce vendrá volando. En la vida real, reproducir cantos grabados muy seguido puede estresar a las aves.</p>
       <div class="ra-panel-lista">${E.map(e => `<button data-llamar="${e.id}"><img src="img/aves/${e.id}.png" alt="">${e.nombre}</button>`).join("")}</div>`;
   } else {
     const items = [["flores", "flor", "Flores"], ["frutas", "fruta", "Frutas"], ["agua", "agua", "Agua"], ["pasto", "pasto", "Pasto"], ["insectos", "insecto", "Insectos"]];

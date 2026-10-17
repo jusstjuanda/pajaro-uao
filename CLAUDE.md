@@ -2,6 +2,8 @@
 
 Proyecto: app web de Realidad Aumentada (three.js) con las aves del campus de la UAO, para el Parcial 2 de Fundamentos de Realidad Virtual. Sitio estático en `PaginaPajaro/wwwroot`. Pitch: sábado 2026-10-17, 8:00 a.m.
 
+**FASE ACTUAL (2026-10-16 noche): el código está CERRADO y la fase de valor agregado está EN STANDBY.** Lo que sigue es una **sesión de repaso privada** para que Hugo pueda **sustentar** el proyecto (pitch el sábado 2026-10-17, 8:00 a.m.): explícale todo desde cero (asume que **no sabe programar**: qué es un `.js`, qué es three.js, WebGL, giroscopio, WebXR, git…), usando **`SUSTENTACION.md`** (glosario, mapa de archivos, cómo funciona, decisiones, relación con Fundamentos de Realidad Virtual, preguntas probables del profesor y respuestas, cómo hablar de la IA con honestidad). No propongas cambios ni extras salvo que Hugo los pida; si encuentra un bug, corrígelo con prueba.
+
 **Antes de tocar nada, lee en este orden:**
 1. `ESTADO_ACTUAL.md` — qué falta y qué hay sin commit (archivo vivo).
 2. `BITACORA_PAJARO.md` — memoria completa y permanente: reglas, historial, decisiones, lo descartado, arquitectura. **No se borra nada de ella**; los cambios importantes se añaden con fecha en su sección 12.

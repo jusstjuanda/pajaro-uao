@@ -9,7 +9,7 @@ window.ESPECIES_RA = [
     colores: { espalda: "#8A6A3A", vientre: "#F6CF1E", cabeza: "#1D1B1A", ala: "#9C7240", cola: "#7A5A30", pico: "#1A1A1A", patas: "#2b2b2b" },
     extras: { ceja: "#FFFFFF", garganta: "#FFFFFF", corona: "#F6CF1E", puntaAla: "#C99A58" },
     marcas: [["cabeza", "Cabeza negra con ceja blanca"], ["vientre", "Vientre amarillo radiante"], ["ala", "Alas con bordes rojizos"]],
-    pistas: ["Su nombre imita su llamado fuerte: «bi-cho-fué»", "Come de todo: peces, insectos, lagartijas y frutas", "Vientre amarillo y cabeza negra con ceja blanca"]
+    pistas: ["Su nombre imita su llamado fuerte, \"bi-cho-fué\"", "Come de todo: peces, insectos, lagartijas y frutas", "Vientre amarillo y cabeza negra con ceja blanca"]
   },
   {
     id: "azulejo", nombre: "Azulejo común", cientifico: "Thraupis episcopus", canto: "azulejo", comida: ["frutas"],

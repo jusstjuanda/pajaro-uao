@@ -12,6 +12,14 @@
   <link rel="stylesheet" href="css/estilos.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M4 20c6-2 9-8 16-8 3 0 5 2 7 4l-5 1c-3 6-10 9-18 3z' fill='%23F2A541'/></svg>">
   <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+  <script>
+    // La página siempre abre arriba, en la portada. Si la dirección trae un ancla (como #guia, que el navegador
+    // completa solo después de usar el menú) se ignora, en vez de llevar directo a esa sección.
+    if (location.hash) {
+      history.replaceState(null, "", location.pathname + location.search);
+      addEventListener("load", () => scrollTo({ top: 0, behavior: "instant" }));
+    }
+  </script>
 </head>
 <body>
   <!-- íconos de la interfaz de RA (se usan con <svg class="ico"><use href="#i-nombre"/></svg>) -->
