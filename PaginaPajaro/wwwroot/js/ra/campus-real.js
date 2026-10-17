@@ -393,7 +393,7 @@ function letreroRojo() {                                // el cartel rojo calado
 
 function canchas() {
   const g = new THREE.Group();
-  const campo = (tipo, w, d, x, z) => {                                              // w = largo (a lo largo de z), d = ancho
+  const campo = (tipo, w, d, x, z) => {                                              // w = largo (a lo largo de x: horizontales), d = ancho
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ map: texturaCampo(tipo), roughness: 1 }));
     m.rotation.set(-Math.PI / 2, 0, Math.PI / 2); m.position.set(x, 0.05, z); g.add(m); return m;
   };
@@ -448,13 +448,13 @@ function cielo() {
 // ---------- parque al frente de la Portería 3: canchas, zona verde, sendero recto y el parqueadero de los estudiantes
 function parqueSur() {
   const g = new THREE.Group();
-  const campo = (tipo, w, d, x, z) => {                                              // w = largo (a lo largo de z), d = ancho
+  const campo = (tipo, w, d, x, z) => {                                              // w = largo (a lo largo de x: horizontales), d = ancho
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ map: texturaCampo(tipo), roughness: 1 }));
-    m.rotation.set(-Math.PI / 2, 0, Math.PI / 2); m.position.set(x, 0.05, z); g.add(m);
+    m.rotation.set(-Math.PI / 2, 0, 0); m.position.set(x, 0.05, z); g.add(m);
   };
   campo("futbol", 44, 26, 30, -250); campo("basquet", 28, 15, -30, -244); campo("voley", 18, 9, -30, -270);
   const arcos = new THREE.Group();
-  for (const sz of [-1, 1]) { const a = new THREE.Group(); a.add(caja(0.2, 2.2, 0.2, std("#FFFFFF"), -2.8, 1.1, 0), caja(0.2, 2.2, 0.2, std("#FFFFFF"), 2.8, 1.1, 0), caja(5.8, 0.2, 0.2, std("#FFFFFF"), 0, 2.2, 0)); a.position.set(30, 0, -250 + sz * 22); arcos.add(a); }
+  for (const sz of [-1, 1]) { const a = new THREE.Group(); a.add(caja(0.2, 2.2, 0.2, std("#FFFFFF"), -2.8, 1.1, 0), caja(0.2, 2.2, 0.2, std("#FFFFFF"), 2.8, 1.1, 0), caja(5.8, 0.2, 0.2, std("#FFFFFF"), 0, 2.2, 0)); a.rotation.y = Math.PI / 2; a.position.set(30 + sz * 22, 0, -250); arcos.add(a); }
   fusionar(arcos); g.add(arcos);
   // parqueadero: asfalto con rayas de plazas y carros (instancias) en el fondo, al final del sendero
   const [cv, c] = lienzo(256, 256);
@@ -523,18 +523,26 @@ export function crearCampusReal({ evitar = [] } = {}) {          // evitar: [x, 
   const lt = rotulo(6.4, 1.15, 512, 92, (c, W, H) => { logoUao(c, 8, 6, H * 0.8, C.blanco); c.fillStyle = C.blanco; c.font = `700 ${H * 0.78}px Arial, Helvetica, sans-serif`; c.textBaseline = "middle"; c.fillText("Labs", W * 0.5, H * 0.5); });
   lt.rotation.y = Math.PI; lt.position.set(0, 3.6, 41.55); labs.add(lt);
   for (const sx of [-1, 1]) {
-    const gradas = new THREE.Group();                                                 // 12 escalones que bajan hacia el sur
-    for (let k = 0; k < 12; k++) { const top = YT - (k + 1) * 0.35; gradas.add(caja(4.4, top, 0.85, matConcreto, 0, top / 2, -(k + 0.5) * 0.85)); }
-    gradas.position.set(sx * 9, 0, 42); fusionar(gradas); labs.add(gradas);
-    const rampa = new THREE.Group(), L = Math.hypot(18, YT);                          // rampa larga que baja hacia las aulas
-    rampa.add(caja(3.4, 0.35, L, std("#BDB3A2"), 0, -0.17, 0), caja(0.3, 0.8, L, std(C.ladrilloArco), -1.55, 0.2, 0), caja(0.3, 0.8, L, std(C.ladrilloArco), 1.55, 0.2, 0));
+    // gradas HORIZONTALES (de lado a lado): bajan desde la rampa hacia el centro, donde está la entrada de Labs; son macizas (ladrillo con huella de concreto)
+    const gradas = new THREE.Group(), N = 12, huella = 0.53, ladr = std(C.ladrilloArco);
+    for (let k = 0; k < N; k++) {
+      const top = YT - (k + 1) * (YT / N), x = sx * (12.6 - (k + 0.5) * huella);
+      gradas.add(caja(huella, top, 6, ladr, x, top / 2, 39), caja(huella + 0.04, 0.1, 6.04, matConcreto, x, top + 0.05, 39));
+    }
+    fusionar(gradas); labs.add(gradas);
+    // rampa larga que baja hacia las aulas: cuña MACIZA de ladrillo (no queda hueca por debajo) con la losa de concreto y los bordes encima
+    const perfil = new THREE.Shape(); perfil.moveTo(0, 0); perfil.lineTo(0, YT); perfil.lineTo(18, 0); perfil.closePath();
+    const cuna = new THREE.Mesh(new THREE.ExtrudeGeometry(perfil, { depth: 3.4, bevelEnabled: false }).translate(0, 0, -1.7).rotateY(Math.PI / 2), ladr);
+    cuna.position.set(sx * 14.5, 0, 42); labs.add(cuna);
+    const rampa = new THREE.Group(), L = Math.hypot(18, YT);
+    rampa.add(caja(3.4, 0.35, L, std("#BDB3A2"), 0, -0.17, 0), caja(0.3, 0.8, L, ladr, -1.55, 0.2, 0), caja(0.3, 0.8, L, ladr, 1.55, 0.2, 0));
     rampa.rotation.x = -Math.atan2(YT, 18); rampa.position.set(sx * 14.5, YT / 2, 33); fusionar(rampa); labs.add(rampa);
   }
   g.add(labs);
 
   // ---- el resto del campus (nivel bajo)
   const caminos = [
-    [0, 33, 30, 16], [0, 22, 9, 8],                                                  // explanada al pie de UAO Labs y sendero que baja al Ágora
+    [0, 34, 30, 16], [0, 22, 9, 8],                                                  // explanada al pie de UAO Labs y sendero que baja al Ágora
     [0, -100, 7, 180],                                                                // eje entre Aulas 2 y 3, hasta la Portería 3
     [38, -50, 5, 120], [-40, -108, 5, 110], [-12, -26, 100, 5], [34, 0, 24, 5],       // pasos entre aulas, enlace al norte de las aulas, entrada a Aulas 1
     [-12, -146, 90, 5], [28, -134, 52, 24], [-4, -202, 36, 14], [-4, -266, 5, 108]    // frente de la cafetería, plazoleta de la Portería 3 y sendero recto hacia el parqueadero
@@ -560,6 +568,24 @@ export function crearCampusReal({ evitar = [] } = {}) {          // evitar: [x, 
   const lg = lago(animar, 10, 8.5); lg.position.set(52, 0, -97); g.add(lg);
   const e1 = lago(animar, 5, 5, { seed: 31 }); e1.position.set(31, 0, -21); g.add(e1);
   const e2 = lago(animar, 6.5, 5, { fuente: false, seed: 41 }); e2.position.set(-58, 0, -86); g.add(e2);
+  // alrededor del lago: árboles frondosos (fuera del camino de la cámara), piedras grandes de decoración y dos bancas mirando al agua
+  const orilla = new THREE.Group(), rl = semilla(612), hojasL = ["#3F7A36", "#4F8F3E", "#5BA04A", "#356B30"].map(c => std(c)), maderaL = std("#6A4A2E");
+  for (const [x, z, esc] of [[68, -101, 2.3], [64, -112, 1.9], [71, -86, 2.1], [58, -80, 2], [44, -109, 2.2], [75, -96, 1.8], [40, -84, 1.9], [47, -76, 1.8], [80, -108, 2], [78, -78, 2.1]]) {
+    if (!evitar.every(([cx, cz, r]) => Math.hypot(x - cx, z - cz) > r)) continue;
+    const t = crearArbol(rl, hojasL, maderaL); t.position.set(x, 0, z); t.rotation.y = rl() * 6.28; t.scale.setScalar(esc); orilla.add(t);
+  }
+  const grises = ["#8A8578", "#7E7A6E", "#9A958A", "#6F6B60"];
+  for (let i = 0; i < 16; i++) {
+    const a = rl() * 6.283 + i * 0.4, k = 1.22 + rl() * 0.35, r = 0.7 + rl() * 1.1;
+    const p = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), std(grises[i % 4])); p.position.set(52 + Math.cos(a) * 10 * k, r * 0.35, -97 + Math.sin(a) * 8.5 * k); p.scale.set(1, 0.7, 1.1); p.rotation.y = rl() * 3; orilla.add(p);
+  }
+  const banca = (x, z, giro) => {
+    const b = new THREE.Group(), madera = std("#8A5A34"), metal = std("#3C4145");
+    b.add(caja(1.9, 0.1, 0.55, madera, 0, 0.5, 0), caja(1.9, 0.5, 0.08, madera, 0, 0.85, -0.25), caja(0.08, 0.5, 0.5, metal, -0.85, 0.25, 0), caja(0.08, 0.5, 0.5, metal, 0.85, 0.25, 0), caja(0.08, 0.9, 0.08, metal, -0.85, 0.7, -0.25), caja(0.08, 0.9, 0.08, metal, 0.85, 0.7, -0.25));
+    b.position.set(x, 0, z); b.rotation.y = giro; b.scale.setScalar(1.4); orilla.add(b);
+  };
+  banca(65.5, -97, -Math.PI / 2); banca(52, -85.2, Math.PI);                              // una al este y otra al norte del lago, de cara al agua
+  fusionar(orilla); g.add(orilla);
   const pq2 = parqueaderoSolar(3, 30); pq2.rotation.y = Math.PI / 2; pq2.position.set(-60, 0, -10); g.add(pq2);
   const cn = canchas(); cn.position.set(132, 0, -50); g.add(cn);
   g.add(parqueSur());
@@ -572,7 +598,7 @@ export function crearCampusReal({ evitar = [] } = {}) {          // evitar: [x, 
     (x, z) => rect(x, z, -12, -26, 50, 4), (x, z) => rect(x, z, 34, 0, 12, 4), (x, z) => rect(x, z, -12, -146, 45, 4),
     (x, z) => rect(x, z, 56, -22, 13, 36), (x, z) => rect(x, z, 20, -79, 13, 28), (x, z) => rect(x, z, -22, -113, 13, 36), (x, z) => rect(x, z, -59, -139, 13, 26),
     (x, z) => rect(x, z, 58, -150, 14, 34), (x, z) => rect(x, z, 28, -168, 24, 22), (x, z) => rect(x, z, 28, -134, 27, 17), (x, z) => rect(x, z, -4, -202, 19, 9),
-    (x, z) => Math.hypot((x - 52) / 14, (z + 97) / 12) < 1, (x, z) => Math.hypot(x - 31, z + 21) < 8, (x, z) => Math.hypot((x + 58) / 9, (z + 86) / 8) < 1,
+    (x, z) => Math.hypot((x - 52) / 25, (z + 97) / 22) < 1, (x, z) => Math.hypot(x - 31, z + 21) < 8, (x, z) => Math.hypot((x + 58) / 9, (z + 86) / 8) < 1,
     (x, z) => rect(x, z, 70, 60, 17, 20), (x, z) => rect(x, z, -60, -10, 8, 17),
     (x, z) => rect(x, z, 132, -50, 36, 66), (x, z) => rect(x, z, 0, 170, 160, 9), (x, z) => rect(x, z, 0, -214, 160, 8), (x, z) => rect(x, z, 96, -20, 5, 215),
     (x, z) => rect(x, z, 0, -258, 52, 38), (x, z) => rect(x, z, -4, -300, 4, 75), (x, z) => rect(x, z, 0, -331, 55, 25),      // parque de canchas, sendero y parqueadero
