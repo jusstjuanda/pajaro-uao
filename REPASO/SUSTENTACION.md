@@ -2,6 +2,7 @@
 
 > Este archivo es para **estudiar** (no se publica en la web; vive solo en el repo). Está escrito para alguien que **no sabe programar**: todo se explica desde cero y con ejemplos. Lo ideal es leerlo en orden una vez y después usarlo como consulta rápida (hay un índice de preguntas del profesor al final).
 > Pitch y sustentación: **sábado 2026-10-17, 8:00 a.m.** (5 min de presentación + 5 min de preguntas).
+> **¿Quieres la versión larga, a prueba de tontos?** Esta misma carpeta ([`00_EMPIEZA_AQUI.md`](00_EMPIEZA_AQUI.md)) tiene 24 capítulos (HTML, CSS y JavaScript desde cero, cómo se hicieron las aves y las animaciones, la RA, el sonido, el quiz, la cinemática, decisiones y alternativas como «¿por qué no A-Frame?», relación con la materia, quién hizo qué y la IA, más de 100 preguntas con respuesta, glosario y ejercicios). Este archivo es el resumen rápido de consulta.
 
 ---
 
@@ -194,7 +195,7 @@ Cada canto es una **función** que programa «tonos» (osciladores con una frecu
 **Qué es:** una experiencia 3D en vivo (no es un archivo de video) de unos 108 segundos.
 - **El escenario** (`campus-real.js`) se construyó **a partir de las fotos y mapas del campus** que aportó Hugo (mapa de la carrera «Runners», fotos aéreas y de calle): Portería 1 con su letrero «uao» y la dirección, el Edificio Central con el Arco Central (más alto que el resto del campus), UAO Labs en el sótano con gradas y rampas, el Ágora circular con palmas, las aulas de 4 pisos, el lago, la cafetería con mesas, la Portería 3, el parque con canchas y el parqueadero.
 - **La cámara** sigue una **curva Catmull-Rom** (`PASOS` en `recorrido.js`): una lista de puntos «dónde está la cámara» y «hacia dónde mira». Entre uno y otro se interpola suavemente.
-- **Las aves** son ~140 formas instanciadas (cuerpo + dos alas) que se mueven en círculos y trayectorias, y una bandada guía que acompaña a la cámara.
+- **Las aves** son ~105 formas instanciadas (cuerpo + dos alas) que se mueven en círculos y trayectorias, y una bandada guía que acompaña a la cámara.
 - **Interacción:** arrastrar para mirar 360° (o mover el celular con giroscopio), botón de **velocidad ×1/×2/×4** y botón **Saltar**. Al terminar, **vuelve a la RA** tal como estaba (se esconden y luego se muestran las aves y el campus simulado; lo que estaba pendiente se ejecuta al volver).
 - **Rendimiento:** unos 236 mil triángulos en total (~200 mil por vista); se usa instanciado y fusión; durante la cinemática se baja un poco la resolución de pantalla.
 - Está en **módulos aparte** (`campus-real.js`, `recorrido.js`) y `ra.js` solo los llama, así que no puede dañar lo demás.
@@ -239,37 +240,6 @@ Un dibujo animado en **canvas 2D** (no 3D): cielo en degradado que «amanece», 
 | **Extensión a RV con visor** | three.js ya integra `renderer.xr`; la cinemática podría correr con un visor (p. ej. Quest) con `immersive-vr`. **No está implementado** (trabajo futuro) |
 
 ---
-
-## 8. Cómo se hizo el proyecto (historia corta)
-
-- **12 de octubre:** un compañero (`jusstjuanda`) creó el repositorio y publicó la primera versión funcional: motor RA con three.js (sin A-Frame), 12 aves, las 7 interacciones, el quiz de 5 preguntas, la portada con el amanecer animado y la guía de 84 especies (según su bitácora).
-- **15 y 16 de octubre (Hugo):** se corrigieron errores (árboles, binoculares, soportes de las aves), se pulió el **estilo de la página** (hojas de la guía como decoración, arco de palmas, logo y tipografías), se arreglaron textos que se salían de la pantalla, se mejoró el **campus simulado** y las aves (más detalle), se hizo que salgan las **12 aves a la vez**, se arregló la foto (fecha sin pegarse), se hizo el **quiz nuevo** (59 preguntas, 2 vidas, dato curioso) y la **cinemática** (con tus fotos y mapas del campus y varias rondas de correcciones), el botón «Cinemática» y la velocidad. También se corrigió que la página abriera directo en la sección de la guía cuando la dirección traía `#guia`.
-- Todo está en el historial de Git (`git log`) con los mensajes de cada commit; los commits los hace Hugo desde GitHub Desktop.
-- Existe una **bitácora** (`BITACORA_PAJARO.md`) con todo lo hablado y decidido: es la memoria del proyecto.
-
----
-
-## 9. Quién hizo qué, y cómo hablar del uso de IA
-
-**La verdad, tal como es (sin adornos):** el código se escribió con ayuda de una **IA de programación (Claude, de Anthropic)** que Hugo fue dirigiendo. Eso no es un secreto ni algo para esconder; lo importante es **qué hizo cada uno**.
-
-**Lo que hizo el equipo / Hugo (y puedes afirmar con confianza):**
-- Decidir **qué se construye** y **qué no** (por ejemplo: mantener el estilo, qué preguntas entran al quiz y cuáles no, no usar cantos grabados, hacer la cinemática, cómo debe verse y qué debe contener cada lugar del campus).
-- Aportar el **material del campus**: fotos, mapas anotados (norte/sur, aulas, Ágora, rampas, gradas, lago, portería 3, parque, parqueadero) y **corregir** lo que no coincidía con la realidad.
-- **Probar** en celulares reales (Android e iOS), reportar errores con capturas y aprobar cada cambio.
-- Revisar que **todo texto quede dentro de la pantalla**, que suene natural y que la interfaz sea clara.
-- Hacer los **commits y la publicación** (GitHub Desktop → GitHub Pages).
-
-**Lo que hizo la IA:**
-- Escribir y organizar el código, proponer opciones técnicas, encontrar y arreglar errores, medir rendimiento y llevar la documentación.
-
-**Cómo decirlo (propuesta de respuesta si te preguntan «¿esto lo hizo una IA?»):**
-> «Usamos una IA como asistente de programación, igual que otros usan documentación o foros. Nosotros decidimos qué debía hacer la aplicación, reunimos la información y el material del campus, dirigimos el diseño, probamos en celulares reales y corregimos lo que no estaba bien. Y entendemos cómo funciona: puedo explicarle cada parte.»
-Para que esa frase sea cierta, **tienes que poder explicar** las secciones 3 a 6 de esta guía. Eso es justo lo que vamos a practicar.
-
-**Si te preguntan por una parte concreta del código**, apóyate en el mapa de archivos (sección 4) y en las funciones que te nombro (`ciclo`, `alGirar`, `agregarAve`, `volar`, `tomarFoto`, `MODOS`, `armarMazo`, `crearRecorrido`…).
-
-**Sobre los comentarios del código** (los `//` en español): son notas para explicar decisiones. Algunas suenan «de IA» (tercera persona, aclaraciones largas). Si quieres, en la sesión las repasamos y decides cuáles simplificar; no cambian el funcionamiento.
 
 ---
 
@@ -409,5 +379,5 @@ Unas 4.200 líneas entre HTML, CSS y JavaScript; el archivo más grande es el mo
 - Que **las aves están ancladas al piso** en la RA normal (solo en «Tamaño real»).
 - Que funciona **«Tamaño real» en iPhone** (no).
 - Que el campus de la cinemática es **una réplica exacta** (es una interpretación low-poly basada en fotos y mapas).
-- Que se probó en **todos** los celulares (se probó en Android e iPhone por el equipo; la cinemática falta confirmarla en un celular real si aún no se ha hecho).
+- Que se probó en **todos** los celulares (el equipo probó todo, incluida la cinemática, en Android e iPhone; pero no hay una medición numérica de cuadros por segundo ni se probó en toda la variedad de modelos).
 - Que los datos de aves **«los hicimos nosotros»**: son de la guía de la UAO (crédito a la Escuela de Turismo).
